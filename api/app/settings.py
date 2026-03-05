@@ -12,7 +12,7 @@ class Settings(BaseSettings):
         "test",
     )
     AWS_REGION: str = "eu-west-2"
-    AWS_ENDPOINT: str = os.environ.get("LOCALSTACK_ENDPOINT")
+    AWS_ENDPOINT: str = os.environ.get("LOCALSTACK_ENDPOINT", "")
 
 
 @lru_cache
