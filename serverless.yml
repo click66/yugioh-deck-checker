@@ -23,7 +23,7 @@ provider:
             - dynamodb:UpdateItem
             - dynamodb:Scan
             - dynamodb:Query
-          Resource: "arn:aws:dynamodb:eu-west-2:*:table/jobs"
+          Resource: "arn:aws:dynamodb:eu-west-2:*:table/yugioh-deck-checker-*"
 
 functions:
   api:
