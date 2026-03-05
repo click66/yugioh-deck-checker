@@ -10,7 +10,7 @@ from app.settings import get_settings
 
 
 FUNCTIONS = {
-    "consistency": "consistency-lambda",
+    "consistency": "consistency",
 }
 
 

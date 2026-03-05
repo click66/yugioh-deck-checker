@@ -1,3 +1,6 @@
+include:
+  - functions/compose.yaml
+
 services:
   api:
     build: 

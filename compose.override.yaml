@@ -1,3 +1,6 @@
+include:
+  - functions/compose.override.yaml
+
 services:
   api:
     build:

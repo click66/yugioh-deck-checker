@@ -1,0 +1,5 @@
+services:
+  function-consistency:
+    build:
+      context: ./consistency
+      target: build

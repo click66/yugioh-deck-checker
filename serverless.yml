@@ -13,6 +13,11 @@ provider:
         path: ./api
         file: Dockerfile
         platform: linux/amd64
+      consistency:
+        path: ./functions/consistency
+        file: Dockerfile
+        platform: linux/amd64
+
   iam:
     role:
       statements:
@@ -35,6 +40,10 @@ functions:
       - httpApi:
           path: /{proxy+}
           method: ANY
+  consistency:
+    image:
+      name: consistency
+    timeout: 300
 
 resources:
   Resources:

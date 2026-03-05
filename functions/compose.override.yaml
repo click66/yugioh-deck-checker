@@ -1,0 +1,7 @@
+services:
+  function-consistency:
+#     build:
+#       target: dev-runtime
+    volumes:
+      - ./consistency:/app
+    working_dir: /app
