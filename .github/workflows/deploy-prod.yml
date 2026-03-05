@@ -1,4 +1,4 @@
-name: Deploy Serverless Prod
+name: Production Deployment
 
 on:
   push:
@@ -7,8 +7,8 @@ on:
       - feature/prod-deployment
 
 permissions:
-    id-token: write
-    contents: read
+  id-token: write
+  contents: read
 
 jobs:
   deploy:
@@ -26,9 +26,8 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v6
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: eu-west-2
+          role-to-assume: arn:aws:iam::082624796438:role/deployment_yugioh-deck-checker
 
       - name: Install Serverless Framework
         run: npm install -g serverless
