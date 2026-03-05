@@ -22,8 +22,11 @@ async def lifespan(app: FastAPI):
         # Setup AWS Lambda and initiatilse job runners
         job_runners = {}
         for key, function_name in FUNCTIONS.items():
-            runner = LambdaJobRunner(function_name=function_name)
-            await runner.init_client(settings)
+            runner = LambdaJobRunner(
+                function_name=function_name,
+                settings=settings,
+            )
+            await runner.init_client()
             job_runners[key] = runner
         app.state.job_runners = job_runners
 

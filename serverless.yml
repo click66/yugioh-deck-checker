@@ -28,7 +28,11 @@ provider:
             - dynamodb:UpdateItem
             - dynamodb:Scan
             - dynamodb:Query
-          Resource: "arn:aws:dynamodb:eu-west-2:*:table/yugioh-deck-checker-*"
+          Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/yugioh-deck-checker-*"
+        - Effect: Allow
+          Action:
+            - lambda:InvokeFunction
+          Resource: "arn:aws:lambda:eu-west-2:*:function:yugioh-deck-checker-*"
 
 functions:
   api:
@@ -36,6 +40,8 @@ functions:
       name: api
     timeout: 30
     memorySize: 1024
+    environment:
+      LAMBDA_FUNCTION_PREFIX: "${self:service}-${opt:stage, self:provider.stage, 'prod'}"
     events:
       - httpApi:
           path: /{proxy+}

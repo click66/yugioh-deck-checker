@@ -13,19 +13,20 @@ class LambdaJobRunner:
     Supports LocalStack in dev/test via LOCALSTACK_ENDPOINT env variable.
     """
 
-    def __init__(self, function_name: str):
+    def __init__(self, function_name: str, settings: Settings):
         self.function_name = function_name
+        self.settings = settings
         self._client = None
         self._session = aioboto3.Session()
 
-    async def init_client(self, settings: Settings):
+    async def init_client(self):
         if self._client is None:
             self._client = await self._session.client(
                 "lambda",
-                region_name=settings.AWS_REGION,
-                aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-                aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-                endpoint_url=settings.AWS_ENDPOINT,
+                region_name=self.settings.AWS_REGION,
+                aws_access_key_id=self.settings.AWS_ACCESS_KEY_ID,
+                aws_secret_access_key=self.settings.AWS_SECRET_ACCESS_KEY,
+                endpoint_url=self.settings.AWS_ENDPOINT,
             ).__aenter__()
 
     async def close_client(self):
@@ -43,7 +44,7 @@ class LambdaJobRunner:
         }
 
         await self._client.invoke(
-            FunctionName=self.function_name,
+            FunctionName=f"{self.settings.LAMBDA_FUNCTION_PREFIX}-{self.function_name}",
             InvocationType="Event",
             Payload=json.dumps(payload_with_id).encode("utf-8"),
         )
