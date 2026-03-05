@@ -47,9 +47,6 @@ class LambdaJobRunner:
             "job_id": job.job_id,
         }
 
-        print(f"{self.settings.LAMBDA_FUNCTION_PREFIX}-{self.function_name}")
-        print(json.dumps(payload_with_id).encode("utf-8"))
-
         await self._client.invoke(
             FunctionName=f"{self.settings.LAMBDA_FUNCTION_PREFIX}-{self.function_name}",
             InvocationType="Event",

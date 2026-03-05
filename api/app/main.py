@@ -31,9 +31,15 @@ async def lifespan(app: FastAPI):
         app.state.job_runners = job_runners
 
         # Setup DynamoDB connection and initialise job registry
-        app.state.dynamodb_session = aioboto3.Session(
-            region_name=settings.AWS_REGION,
-        )
+        kwargs = {"region_name": settings.AWS_REGION}
+
+        if settings.LOCALSTACK_ENDPOINT:
+            kwargs.update(
+                aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+                aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+            )
+
+        app.state.dynamodb_session = aioboto3.Session(**kwargs)
 
         yield
     finally:

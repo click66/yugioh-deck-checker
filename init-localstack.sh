@@ -11,7 +11,7 @@ echo "Creating test Lambda function..."
 
 # Create a test Lambda function
 awslocal lambda create-function \
-    --function-name consistency-lambda \
+    --function-name yugioh-deck-checker-consistency \
     --runtime python3.11 \
     --role arn:aws:iam::000000000000:role/lambda-role \
     --region eu-west-2 \
@@ -22,7 +22,7 @@ awslocal lambda create-function \
 echo "Creating DynamoDB table for jobs..."
 
 awslocal dynamodb create-table \
-    --table-name jobs \
+    --table-name yugioh-deck-checker-jobs \
     --attribute-definitions AttributeName=job_id,AttributeType=S \
     --key-schema AttributeName=job_id,KeyType=HASH \
     --provisioned-throughput ReadCapacityUnits=5,WriteCapacityUnits=5 || echo "Table already exists"

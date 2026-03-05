@@ -58,23 +58,20 @@ class DynamoJobRegistry:
 
 async def get_job_registry(request: Request) -> AsyncGenerator[DynamoJobRegistry, None]:
     session = request.app.state.dynamodb_session
-    creds = await session.get_credentials()
-    print("Credential method:", creds.method)
-    print("Access key:", creds.access_key)
-    print("Secret key:", creds.secret_key)
-    print("Token:", creds.token)
+    settings = get_settings()
 
-    async with session.client("sts") as sts:
-        identity = await sts.get_caller_identity()
-        print("Caller identity:", identity)
-
-    async with session.client(
-        "dynamodb",
-        config=Config(
+    client_kwargs = {
+        "service_name": "dynamodb",
+        "config": Config(
             connect_timeout=5.0,
             read_timeout=10.0,
             retries={"max_attempts": 3},
-        )
-    ) as dynamodb_client:
+        ),
+    }
+
+    if settings.LOCALSTACK_ENDPOINT:
+        client_kwargs["endpoint_url"] = settings.LOCALSTACK_ENDPOINT
+
+    async with session.client(**client_kwargs) as dynamodb_client:
         registry = DynamoJobRegistry(TABLE_NAME, dynamodb_client)
         yield registry
