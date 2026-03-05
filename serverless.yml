@@ -32,7 +32,7 @@ provider:
         - Effect: Allow
           Action:
             - lambda:InvokeFunction
-          Resource: "arn:aws:lambda:eu-west-2:*:function:yugioh-deck-checker-*"
+          Resource: "arn:aws:lambda:${self:provider.region}:${aws:accountId}:function:yugioh-deck-checker-*"
 
 functions:
   api:

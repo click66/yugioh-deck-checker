@@ -45,16 +45,6 @@ class LambdaJobRunner:
 
         print(f"{self.settings.LAMBDA_FUNCTION_PREFIX}-{self.function_name}")
         print(json.dumps(payload_with_id).encode("utf-8"))
-        import os
-        from botocore.config import Config
-        async with aioboto3.Session(
-            aws_access_key_id=os.environ["AWS_ACCESS_KEY_ID"],
-            aws_secret_access_key=os.environ["AWS_SECRET_ACCESS_KEY"],
-            aws_session_token=os.environ["AWS_SESSION_TOKEN"],
-            region_name=os.environ.get("AWS_REGION", "eu-west-2")
-        ).client("lambda", config=Config(retries={"max_attempts": 3})) as client:
-            functions = await client.list_functions()
-            print(functions)
 
         await self._client.invoke(
             FunctionName=f"{self.settings.LAMBDA_FUNCTION_PREFIX}-{self.function_name}",
