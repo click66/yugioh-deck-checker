@@ -52,14 +52,14 @@ async def create_job(
         },
     )
 
-    # try:
-    await registry.create_job(job)
-    await runner.run_job(job)
-    # except Exception as e:
-    #     raise HTTPException(
-    #         status_code=500,
-    #         detail=f"Failed to invoke Lambda: {e}",
-    #     )
+    try:
+        await registry.create_job(job)
+        await runner.run_job(job)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to invoke Lambda: {e}",
+        )
 
     return ConsistencyJobResponse(job_id=job_id, status=job.status)
 
