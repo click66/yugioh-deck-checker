@@ -5,6 +5,8 @@ frameworkVersion: "4"
 provider:
   name: aws
   region: eu-west-2
+  deploymentBucket:
+    name: serverless-framework-deployments-eu-west-2-64e991aa-8c1a
   ecr:
     images:
       api:
