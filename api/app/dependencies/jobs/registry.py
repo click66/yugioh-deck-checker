@@ -60,7 +60,7 @@ async def get_job_registry(request: Request) -> AsyncGenerator[DynamoJobRegistry
     session = request.app.state.dynamodb_session
     async with session.client(
         "dynamodb",
-        endpoint_url=get_settings().AWS_ENDPOINT,
+        # endpoint_url=get_settings().AWS_ENDPOINT,
         config=Config(
             connect_timeout=5.0,
             read_timeout=10.0,
