@@ -58,9 +58,18 @@ class DynamoJobRegistry:
 
 async def get_job_registry(request: Request) -> AsyncGenerator[DynamoJobRegistry, None]:
     session = request.app.state.dynamodb_session
+    creds = await session.get_credentials()
+    print("Credential method:", creds.method)
+    print("Access key:", creds.access_key)
+    print("Secret key:", creds.secret_key)
+    print("Token:", creds.token)
+
+    async with session.client("sts") as sts:
+        identity = await sts.get_caller_identity()
+        print("Caller identity:", identity)
+
     async with session.client(
         "dynamodb",
-        # endpoint_url=get_settings().AWS_ENDPOINT,
         config=Config(
             connect_timeout=5.0,
             read_timeout=10.0,
