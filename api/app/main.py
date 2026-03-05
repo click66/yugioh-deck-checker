@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 
 import aioboto3
 from fastapi import FastAPI
+from mangum import Mangum
 
 from app.dependencies.jobs.aws_lambda import LambdaJobRunner
 from app.routers import consistency
@@ -43,3 +44,5 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 app.include_router(consistency.router)
+
+handler = Mangum(app)

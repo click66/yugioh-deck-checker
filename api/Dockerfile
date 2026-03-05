@@ -58,4 +58,4 @@ FROM public.ecr.aws/lambda/python:3.14 AS prod-runtime
 
 COPY --from=prod-build /app ${LAMBDA_TASK_ROOT}
 
-CMD ["app.handler"]
+CMD ["app.main.handler"]
