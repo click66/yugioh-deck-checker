@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     AWS_ACCESS_KEY_ID: str | None = os.environ.get("AWS_ACCESS_KEY_ID")
     AWS_SECRET_ACCESS_KEY: str | None = os.environ.get("AWS_SECRET_ACCESS_KEY")
     AWS_REGION: str = "eu-west-2"
-    AWS_ENDPOINT: str | None = os.environ.get("LOCALSTACK_ENDPOINT")
+    LOCALSTACK_ENDPOINT: str | None = os.environ.get("LOCALSTACK_ENDPOINT")
 
     LAMBDA_FUNCTION_PREFIX: str = os.environ.get("LAMBDA_FUNCTION_PREFIX", "")
 

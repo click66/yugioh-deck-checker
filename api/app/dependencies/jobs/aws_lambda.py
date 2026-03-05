@@ -21,16 +21,17 @@ class LambdaJobRunner:
 
     async def init_client(self):
         if self._client is None:
-            self._client = await self._session.client("lambda", **{
-                k: v
-                for k, v in {
-                    "region_name": self.settings.AWS_REGION,
-                    # "aws_access_key_id": self.settings.AWS_ACCESS_KEY_ID,
-                    # "aws_secret_access_key": self.settings.AWS_SECRET_ACCESS_KEY,
-                    # "endpoint_url": self.settings.AWS_ENDPOINT,
-                }.items()
-                if v is not None
-            }).__aenter__()
+            kwargs = {"region_name": self.settings.AWS_REGION}
+
+            if self.settings.LOCALSTACK_ENDPOINT:
+                kwargs.update(
+                    aws_access_key_id=self.settings.AWS_ACCESS_KEY_ID,
+                    aws_secret_access_key=self.settings.AWS_SECRET_ACCESS_KEY,
+                    endpoint_url=self.settings.LOCALSTACK_ENDPOINT,
+                )
+
+            client = self._session.client("lambda", **kwargs)
+            self._client = await client.__aenter__()
 
     async def close_client(self):
         if self._client:
