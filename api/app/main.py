@@ -13,8 +13,6 @@ FUNCTIONS = {
     "consistency": "consistency-lambda",
 }
 
-DYNAMODB_TABLES = ["jobs"]
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

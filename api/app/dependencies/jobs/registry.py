@@ -8,7 +8,7 @@ from fastapi import Request
 from app.dependencies.jobs.job import Job
 from app.settings import get_settings
 
-TABLE_NAME = "jobs"
+TABLE_NAME = "yugioh-deck-checker-jobs"
 
 deserializer = TypeDeserializer()
 

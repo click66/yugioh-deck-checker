@@ -41,7 +41,7 @@ resources:
     JobsTable:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: jobs
+        TableName: yugioh-deck-checker-jobs
         AttributeDefinitions:
           - AttributeName: job_id
             AttributeType: S
