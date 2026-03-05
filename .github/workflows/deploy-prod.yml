@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - feature/prod-deployment
 
 permissions:
   id-token: write
