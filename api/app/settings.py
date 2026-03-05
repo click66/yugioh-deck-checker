@@ -6,11 +6,8 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     # AWS Settings
-    AWS_ACCESS_KEY_ID: str | None = os.environ.get("AWS_ACCESS_KEY_ID", "test")
-    AWS_SECRET_ACCESS_KEY: str | None = os.environ.get(
-        "AWS_SECRET_ACCESS_KEY",
-        "test",
-    )
+    AWS_ACCESS_KEY_ID: str | None = os.environ.get("AWS_ACCESS_KEY_ID")
+    AWS_SECRET_ACCESS_KEY: str | None = os.environ.get("AWS_SECRET_ACCESS_KEY")
     AWS_REGION: str = "eu-west-2"
     AWS_ENDPOINT: str | None = os.environ.get("LOCALSTACK_ENDPOINT")
 
