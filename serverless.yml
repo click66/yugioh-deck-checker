@@ -1,0 +1,24 @@
+service: yugioh-deck-checker
+
+frameworkVersion: "4"
+
+provider:
+  name: aws
+  region: eu-west-2
+  ecr:
+    images:
+      api:
+        path: ./api
+        file: Dockerfile
+        platform: linux/amd64
+
+functions:
+  api:
+    image:
+      name: api
+    timeout: 30
+    memorySize: 1024
+    events:
+      - httpApi:
+          path: /{proxy+}
+          method: ANY
