@@ -6,6 +6,10 @@ on:
       - main
       - feature/prod-deployment
 
+permissions:
+    id-token: write
+    contents: read
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
