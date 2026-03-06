@@ -69,6 +69,11 @@ package:
 
 resources:
   Resources:
+    CloudFrontOAI:
+      Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+      Properties:
+        CloudFrontOriginAccessIdentityConfig:
+          Comment: "OAI for yugioh-deck-checker frontend"
     FrontendBucket:
       Type: AWS::S3::Bucket
       Properties:
@@ -76,6 +81,17 @@ resources:
         WebsiteConfiguration:
           IndexDocument: index.html
           ErrorDocument: index.html
+    FrontendBucketPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        Bucket: !Ref FrontendBucket
+        PolicyDocument:
+          Statement:
+            - Effect: Allow
+              Principal:
+                CanonicalUser: !GetAtt CloudFrontOAI.S3CanonicalUserId
+              Action: s3:GetObject
+              Resource: !Sub "${FrontendBucket.Arn}/*"
     FrontendDistribution:
       Type: AWS::CloudFront::Distribution
       Properties:
@@ -88,7 +104,7 @@ resources:
             - Id: Frontend
               DomainName: !GetAtt FrontendBucket.DomainName
               S3OriginConfig:
-                OriginAccessIdentity: ""
+                OriginAccessIdentity: !Sub "origin-access-identity/cloudfront/${CloudFrontOAI}"
           DefaultCacheBehavior:
             TargetOriginId: Frontend
             ViewerProtocolPolicy: redirect-to-https
