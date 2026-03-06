@@ -17,6 +17,13 @@ services:
       - ./api:/app
     working_dir: /app
   
+  frontend:
+    ports:
+      - 8001:5173
+    volumes:
+      - ./frontend:/app
+    working_dir: /app
+  
   localstack:
     image: localstack/localstack:latest
     ports:
