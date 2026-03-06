@@ -67,14 +67,6 @@ custom:
 package:
   individually: true
 
-hooks:
-  after:deploy:deploy:
-    - npx sls set-env --stage ${opt:stage, 'prod'} \
-        --name VITE_API_URL \
-        --value "${httpApi:api.url}"
-    - npm --prefix ./frontend run build
-    - aws s3 sync ${self:custom.frontend.distributionFolder} s3://${self:custom.frontend.bucketName} --delete
-
 resources:
   Resources:
     FrontendBucket:
