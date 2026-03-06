@@ -99,11 +99,13 @@ resources:
         BillingMode: PAY_PER_REQUEST
 
   Outputs:
-    FrontendBucketName:
-      Value: !Ref FrontendBucket
-      Export:
-        Name: FrontendBucketName
     ApiEndpoint:
       Value: !Sub "https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${opt:stage, self:provider.stage, 'prod'}"
       Export:
         Name: ApiEndpoint
+    FrontendBucketName:
+      Value: !Ref FrontendBucket
+      Export:
+        Name: FrontendBucketName
+    CloudFrontDistributionId:
+      Value: !Ref FrontendDistribution
