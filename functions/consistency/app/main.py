@@ -50,6 +50,9 @@ def lambda_handler(event, context):
         result = None
         status = "failed"
 
+    if result is not None and not isinstance(result, dict):
+        result = {"value": result}
+
     update_expression = "SET #s = :status"
     expression_attr_names = {"#s": "status"}
     expression_attr_values = {":status": {"S": status}}
