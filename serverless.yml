@@ -61,7 +61,6 @@ custom:
   s3Deploy:
     - bucket: "${self:custom.frontend.bucketName}"
       folder: "${self:custom.frontend.distributionFolder}"
-      acl: public-read
       cacheControl: "max-age=31536000"
 
 package:
@@ -78,7 +77,6 @@ resources:
       Type: AWS::S3::Bucket
       Properties:
         BucketName: "${self:custom.frontend.bucketName}"
-        AccessControl: Private
         PublicAccessBlockConfiguration:
           BlockPublicAcls: true
           BlockPublicPolicy: true
@@ -100,44 +98,7 @@ resources:
               Action:
                 - s3:PublicReadGetObject
               Resource: arn:aws:s3:::${self:custom.frontend.bucketName}
-    FrontendOAC:
-      Type: AWS::CloudFront::OriginAccessControl
-      Properties:
-        OriginAccessControlConfig:
-          Name: FrontendOAC
-          Description: "OAC for S3 origin"
-          OriginAccessControlOriginType: s3
-          SigningBehaviour: always
-          SigningProtocol: sigv4
-    FrontendDistribution:
-      Type: AWS::CloudFront::Distribution
-      Properties:
-        DistributionConfig:
-          Origins:
-            - DomainName: !GetAtt FrontendBucket.DomainName
-              Id: Frontend
-              OriginAccessControlId: !Ref FrontendOAC
-              S3OriginConfig: {}
-          Enabled: true
-          DefaultRootObject: index.html
-          Aliases:
-            - ${self:custom.frontend.cloudFrontDomain}
-          DefaultCacheBehavior:
-            TargetOriginId: Frontend
-            ViewerProtocolPolicy: redirect-to-https
-            AllowedMethods:
-              - GET
-              - HEAD
-            CachedMethods:
-              - GET
-              - HEAD
-            ForwardedValues:
-              QueryString: true
-              Cookies:
-                Forward: none
-          ViewerCertificate:
-            AcmCertificateArn: arn:aws:acm:us-east-1:${aws:accountId}:certificate/2a3f7b82-c78d-4531-b60e-a79b5ef4522d
-            SslSupportMethod: sni-only
+
     JobsTable:
       Type: AWS::DynamoDB::Table
       Properties:
