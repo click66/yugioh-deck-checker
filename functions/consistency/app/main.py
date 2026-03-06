@@ -35,7 +35,7 @@ def lambda_handler(event, context):
             ExpressionAttributeNames={"#r": "result", "#s": "status"},
             ExpressionAttributeValues={
                 ":val": {"N": str(result)},
-                ":s": {"S": "completed"},
+                ":status": {"S": "completed"},
             },
         )
 
