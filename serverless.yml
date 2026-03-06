@@ -85,19 +85,19 @@ resources:
         WebsiteConfiguration:
           IndexDocument: index.html
           ErrorDocument: index.html
-    FrontendBucketPolicy:
-      Type: AWS::S3::BucketPolicy
-      Properties:
-        Bucket:
-          Ref: FrontendBucket
-        PolicyDocument:
-          Statement:
-            - Sid: PublicReadGetObject
-              Effect: Allow
-              Principal: "*"
-              Action:
-                - s3:PublicReadGetObject
-              Resource: arn:aws:s3:::${self:custom.frontend.bucketName}
+    # FrontendBucketPolicy:
+    #   Type: AWS::S3::BucketPolicy
+    #   Properties:
+    #     Bucket:
+    #       Ref: FrontendBucket
+    #     PolicyDocument:
+    #       Statement:
+    #         - Sid: PublicReadGetObject
+    #           Effect: Allow
+    #           Principal: "*"
+    #           Action:
+    #             - s3:PublicReadGetObject
+    #           Resource: arn:aws:s3:::${self:custom.frontend.bucketName}
 
     JobsTable:
       Type: AWS::DynamoDB::Table
