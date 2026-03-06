@@ -46,16 +46,6 @@ functions:
       - httpApi:
           path: /{proxy+}
           method: ANY
-          cors:
-            allowedOrigins:
-              - "https://yugioh.clarksirl.com"
-            allowedHeaders:
-              - Content-Type
-              - Authorization
-            allowedMethods:
-              - GET
-              - POST
-              - OPTIONS
   consistency:
     image:
       name: consistency

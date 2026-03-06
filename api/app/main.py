@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 
 import aioboto3
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
 
 from app.dependencies.jobs.aws_lambda import LambdaJobRunner
@@ -47,6 +48,17 @@ async def lifespan(app: FastAPI):
             await runner.close_client()
 
 app = FastAPI(lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        'http://localhost:8000',
+        'https://yugioh.clarksirl.com',
+    ],
+    allow_credentials=True,
+    allow_methods=['*'],
+    allow_headers=['*'],
+)
 
 app.include_router(consistency.router)
 
