@@ -2,7 +2,6 @@ import os
 import boto3
 import logging
 from app.calculator.calculator import simple_consistency
-from decimal import Decimal
 
 logger = logging.getLogger()
 logger.setLevel("INFO")

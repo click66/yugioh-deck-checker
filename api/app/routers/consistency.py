@@ -1,10 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import ValidationError
 from typing import List, Optional
 import uuid
 
 from app.dependencies.jobs.runners import get_job_runner
 from app.dependencies.jobs.registry import get_job_registry
 from app.dependencies.jobs.job import Job
+from app.logger import logger
 from app.schemas import BaseModel
 
 
@@ -83,4 +85,13 @@ async def get_job_status(
     if hasattr(job, "result") and job.result is not None:
         response_data["result"] = job.result
 
-    return ConsistencyJobResponse(**response_data)
+    try:
+        return ConsistencyJobResponse(**response_data)
+    except ValidationError as e:
+        logger.info(
+            f"Failed to construct ConsistencyJobResponse for job {job_id}: {e}",
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to construct response: {e}"
+        )
