@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from typing import List
+from typing import List, Optional
 import uuid
 
 from app.dependencies.jobs.runners import get_job_runner
@@ -25,6 +25,7 @@ class ConsistencyJobRequest(BaseModel):
 class ConsistencyJobResponse(BaseModel):
     job_id: str
     status: str
+    result: Optional[dict] = None
 
 
 @router.post("/jobs/create", response_model=ConsistencyJobResponse)
@@ -61,7 +62,11 @@ async def create_job(
             detail=f"Failed to invoke Lambda: {e}",
         )
 
-    return ConsistencyJobResponse(job_id=job_id, status=job.status)
+    response_data = {"job_id": job_id, "status": job.status}
+    if hasattr(job, "result") and job.result is not None:
+        response_data["result"] = job.result
+
+    return ConsistencyJobResponse(**response_data)
 
 
 @router.get("/jobs/{job_id}", response_model=ConsistencyJobResponse)
@@ -74,7 +79,8 @@ async def get_job_status(
     if job is None:
         raise HTTPException(status_code=404, detail="Job not found")
 
-    return ConsistencyJobResponse(
-        job_id=job.job_id,
-        status=job.status,
-    )
+    response_data = {"job_id": job.job_id, "status": job.status}
+    if hasattr(job, "result") and job.result is not None:
+        response_data["result"] = job.result
+
+    return ConsistencyJobResponse(**response_data)
