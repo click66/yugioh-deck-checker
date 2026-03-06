@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     AWS_REGION: str = "eu-west-2"
     LOCALSTACK_ENDPOINT: str | None = os.environ.get("LOCALSTACK_ENDPOINT")
 
-    LAMBDA_FUNCTION_PREFIX: str = os.environ.get("LAMBDA_FUNCTION_PREFIX", "")
+    ENV_PREFIX: str = os.environ.get("ENV_PREFIX", "")
 
 
 @lru_cache

@@ -8,7 +8,7 @@ from fastapi import Request
 from app.dependencies.jobs.job import Job
 from app.settings import get_settings
 
-TABLE_NAME = "yugioh-deck-checker-jobs"
+TABLE_NAME = "jobs"
 
 deserializer = TypeDeserializer()
 
@@ -73,5 +73,8 @@ async def get_job_registry(request: Request) -> AsyncGenerator[DynamoJobRegistry
         client_kwargs["endpoint_url"] = settings.LOCALSTACK_ENDPOINT
 
     async with session.client(**client_kwargs) as dynamodb_client:
-        registry = DynamoJobRegistry(TABLE_NAME, dynamodb_client)
+        registry = DynamoJobRegistry(
+            f'{settings.ENV_PREFIX}-{TABLE_NAME}',
+            dynamodb_client,
+        )
         yield registry

@@ -41,7 +41,7 @@ functions:
     timeout: 30
     memorySize: 1024
     environment:
-      LAMBDA_FUNCTION_PREFIX: "${self:service}-${opt:stage, self:provider.stage, 'prod'}"
+      ENV_PREFIX: "${self:service}-${opt:stage, self:provider.stage, 'prod'}"
     events:
       - httpApi:
           path: /{proxy+}
@@ -56,7 +56,7 @@ resources:
     JobsTable:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: yugioh-deck-checker-jobs
+        TableName: "${self:service}-${opt:stage, self:provider.stage, 'prod'}-jobs"
         AttributeDefinitions:
           - AttributeName: job_id
             AttributeType: S
