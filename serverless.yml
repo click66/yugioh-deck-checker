@@ -73,7 +73,6 @@ resources:
       Type: AWS::S3::Bucket
       Properties:
         BucketName: "${self:custom.frontend.bucketName}"
-        AccessControl: PublicRead
         WebsiteConfiguration:
           IndexDocument: index.html
           ErrorDocument: index.html
