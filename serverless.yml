@@ -85,19 +85,6 @@ resources:
         WebsiteConfiguration:
           IndexDocument: index.html
           ErrorDocument: index.html
-    # FrontendBucketPolicy:
-    #   Type: AWS::S3::BucketPolicy
-    #   Properties:
-    #     Bucket:
-    #       Ref: FrontendBucket
-    #     PolicyDocument:
-    #       Statement:
-    #         - Sid: PublicReadGetObject
-    #           Effect: Allow
-    #           Principal: "*"
-    #           Action:
-    #             - s3:PublicReadGetObject
-    #           Resource: arn:aws:s3:::${self:custom.frontend.bucketName}
 
     JobsTable:
       Type: AWS::DynamoDB::Table
@@ -110,3 +97,13 @@ resources:
           - AttributeName: job_id
             KeyType: HASH
         BillingMode: PAY_PER_REQUEST
+
+  Outputs:
+    FrontendBucketName:
+      Value: !Ref FrontendBucket
+      Export:
+        Name: FrontendBucketName
+    ApiEndpoint:
+      Value: !Sub "https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${opt:stage, self:provider.stage, 'prod'}"
+      Export:
+        Name: ApiEndpoint

@@ -1,0 +1,36 @@
+import axios from 'axios'
+import { z } from 'zod'
+
+export const ConsistencyJobSchema = z.object({
+    jobId: z.string(),
+    status: z.string(),
+    result: z.object({}).optional().nullable(),
+})
+
+export type ConsistencyJobResponse = z.infer<typeof ConsistencyJobSchema>
+
+const API_URL = import.meta.env.VITE_API_URL || ''
+
+const api = axios.create({
+    baseURL: API_URL,
+    headers: { 'Content-Type': 'application/json' },
+    timeout: 10000,
+})
+
+export function createJob(payload: {
+    deckcount: number
+    names: string[]
+    ratios: number[]
+    ideal_hands: string[][]
+    num_hands: number
+}): Promise<ConsistencyJobResponse> {
+    return api
+        .post('/consistency/jobs/create', payload)
+        .then((res) => ConsistencyJobSchema.parse(res.data))
+}
+
+export function getJob(jobId: string): Promise<ConsistencyJobResponse> {
+    return api
+        .get(`/consistency/jobs/${jobId}`)
+        .then((res) => ConsistencyJobSchema.parse(res.data))
+}

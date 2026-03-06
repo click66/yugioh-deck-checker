@@ -34,7 +34,8 @@ def lambda_handler(event, context):
     names = event["names"]
     ratios = event["ratios"]
     ideal_hands = event["ideal_hands"]
-    num_hands = event.get("num_hands", 100_000)
+    num_hands = 1_000_000   # Stick to 1 million for now; don't want people abusing the tool
+    # num_hands = event.get("num_hands", 1_000_000)
 
     try:
         result = simple_consistency(

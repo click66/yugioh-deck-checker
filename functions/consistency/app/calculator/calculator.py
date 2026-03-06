@@ -20,7 +20,7 @@ def simple_consistency(
     ratios: Sequence[int],
     names: Sequence[str],
     ideal_hands: Sequence[Sequence[str]],
-    num_hands: int = 100_000,
+    num_hands: int = 1_000_000,
 ) -> float:
     """Estimate probability that a random 5-card hand matches an ideal hand."""
 
