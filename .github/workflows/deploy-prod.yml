@@ -49,6 +49,7 @@ jobs:
           echo "$OUTPUTS" > outputs.json
           echo "FRONTEND_BUCKET=$(jq -r '.[] | select(.OutputKey=="FrontendBucketName") | .OutputValue' outputs.json)" >> $GITHUB_ENV
           echo "API_URL=$(jq -r '.[] | select(.OutputKey=="HttpApiUrl") | .OutputValue' outputs.json)" >> $GITHUB_ENV
+          echo "CLOUDFRONT_ID=$(jq -r '.[] | select(.OutputKey=="CloudFrontDistributionId") | .OutputValue' outputs.json)" >> $GITHUB_ENV
 
       - name: Build frontend
         run: |
@@ -59,3 +60,9 @@ jobs:
       - name: Deploy frontend to S3
         run: |
           aws s3 sync ./frontend/dist s3://${FRONTEND_BUCKET} --delete --cache-control max-age=31536000
+
+      - name: Invalidate CloudFront cache
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${CLOUDFRONT_ID} \
+            --paths "/*"
