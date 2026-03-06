@@ -48,7 +48,7 @@ jobs:
             --output json)
           echo "$OUTPUTS" > outputs.json
           echo "FRONTEND_BUCKET=$(jq -r '.[] | select(.OutputKey=="FrontendBucketName") | .OutputValue' outputs.json)" >> $GITHUB_ENV
-          echo "API_URL=$(jq -r '.[] | select(.OutputKey=="ApiEndpoint") | .OutputValue' outputs.json)" >> $GITHUB_ENV
+          echo "API_URL=$(jq -r '.[] | select(.OutputKey=="HttpApiUrl") | .OutputValue' outputs.json)" >> $GITHUB_ENV
 
       - name: Build frontend
         run: |
