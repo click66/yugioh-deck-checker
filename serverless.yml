@@ -78,33 +78,50 @@ resources:
       Type: AWS::S3::Bucket
       Properties:
         BucketName: "${self:custom.frontend.bucketName}"
+        AccessControl: Private
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: true
+          BlockPublicPolicy: true
+          IgnorePublicAcls: true
+          RestrictPublicBuckets: true
         WebsiteConfiguration:
           IndexDocument: index.html
           ErrorDocument: index.html
     FrontendBucketPolicy:
       Type: AWS::S3::BucketPolicy
       Properties:
-        Bucket: !Ref FrontendBucket
+        Bucket:
+          Ref: FrontendBucket
         PolicyDocument:
           Statement:
-            - Effect: Allow
-              Principal:
-                CanonicalUser: !GetAtt CloudFrontOAI.S3CanonicalUserId
-              Action: s3:GetObject
-              Resource: !Sub "${FrontendBucket.Arn}/*"
+            - Sid: PublicReadGetObject
+              Effect: Allow
+              Principal: "*"
+              Action:
+                - s3:PublicReadGetObject
+              Resource: arn:aws:s3:::${self:custom.frontend.bucketName}
+    FrontendOAC:
+      Type: AWS::CloudFront::OriginAccessControl
+      Properties:
+        OriginAccessControlConfig:
+          Name: FrontendOAC
+          Description: "OAC for S3 origin"
+          OriginAccessControlOriginType: s3
+          SigningBehaviour: always
+          SigningProtocol: sigv4
     FrontendDistribution:
       Type: AWS::CloudFront::Distribution
       Properties:
         DistributionConfig:
+          Origins:
+            - DomainName: !GetAtt FrontendBucket.DomainName
+              Id: Frontend
+              OriginAccessControlId: !Ref FrontendOAC
+              S3OriginConfig: {}
           Enabled: true
           DefaultRootObject: index.html
           Aliases:
             - ${self:custom.frontend.cloudFrontDomain}
-          Origins:
-            - Id: Frontend
-              DomainName: !GetAtt FrontendBucket.DomainName
-              S3OriginConfig:
-                OriginAccessIdentity: !Sub "origin-access-identity/cloudfront/${CloudFrontOAI}"
           DefaultCacheBehavior:
             TargetOriginId: Frontend
             ViewerProtocolPolicy: redirect-to-https
