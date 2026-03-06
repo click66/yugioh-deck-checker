@@ -49,6 +49,8 @@ functions:
   consistency:
     image:
       name: consistency
+    environment:
+      ENV_PREFIX: "${self:service}-${opt:stage, self:provider.stage, 'prod'}"
     timeout: 300
 
 resources:

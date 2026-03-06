@@ -1,7 +1,14 @@
 services:
   function-consistency:
-#     build:
-#       target: dev-runtime
+    build:
+      context: ./consistency
+      target: dev-build
+    environment:
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=tests
+      - AWS_REGION=eu-west-2
+      - LOCALSTACK_ENDPOINT=http://localstack:4566
+      - ENV_PREFIX=yugioh-deck-checker-local
     volumes:
       - ./consistency:/app
     working_dir: /app
