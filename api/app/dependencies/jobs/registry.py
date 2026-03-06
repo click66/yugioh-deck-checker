@@ -38,7 +38,7 @@ class DynamoJobRegistry:
             status=deserialized.get("status", "pending"),
             created_at=deserialized.get("created_at"),
             completed_at=deserialized.get("completed_at"),
-            result=deserialized.get("result", {}),
+            result=deserialized.get("result", None),
         )
 
     async def create_job(self, job: Job, ttl_seconds: int = 600):
