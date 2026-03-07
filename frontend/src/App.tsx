@@ -253,15 +253,19 @@ function Step1({ expanded, toggle, deckProps }: any) {
         Record<number, string[]>
     >({})
 
+    const [highlightedIndex, setHighlightedIndex] = useState<
+        Record<number, number>
+    >({})
+
     const updateRow = (
         index: number,
         field: 'name' | 'count',
         value: string,
     ) => {
         const updated = [...deck]
-        if (field === 'count')
+        if (field === 'count') {
             updated[index].count = value === '' ? '' : Number(value)
-        else {
+        } else {
             updated[index].name = value
             const matches = value
                 ? cardDatabase
@@ -272,6 +276,7 @@ function Step1({ expanded, toggle, deckProps }: any) {
                       .map((c) => c.name)
                 : []
             setActiveSuggestions((prev) => ({ ...prev, [index]: matches }))
+            setHighlightedIndex((prev) => ({ ...prev, [index]: 0 }))
         }
         setDeck(updated)
     }
@@ -281,6 +286,7 @@ function Step1({ expanded, toggle, deckProps }: any) {
         updated[index].name = name
         setDeck(updated)
         setActiveSuggestions((prev) => ({ ...prev, [index]: [] }))
+        setHighlightedIndex((prev) => ({ ...prev, [index]: 0 }))
     }
 
     const addRow = () => setDeck([...deck, { name: '', count: 1 }])
@@ -339,6 +345,7 @@ function Step1({ expanded, toggle, deckProps }: any) {
 
         reader.readAsText(file)
     }
+
     return (
         <Panel
             title="Step 1 — Configure Deck"
@@ -361,62 +368,95 @@ function Step1({ expanded, toggle, deckProps }: any) {
                     <div className="flex-1 italic">Blank Card</div>
                 </div>
 
-                {deck.map((row: DeckLine, i: number) => (
-                    <div
-                        key={i}
-                        className="relative flex gap-3 items-center bg-gray-50 border border-gray-200 rounded-lg px-3 py-2"
-                    >
-                        <input
-                            type="number"
-                            min={1}
-                            max={3}
-                            value={row.count}
-                            onChange={(e) =>
-                                updateRow(i, 'count', e.target.value)
-                            }
-                            className="w-16 border border-gray-200 rounded px-2 py-1"
-                        />
-                        <div className="flex-1 relative">
+                {deck.map((row: DeckLine, i: number) => {
+                    const suggestions = activeSuggestions[i] || []
+                    const highlighted = highlightedIndex[i] ?? 0
+
+                    return (
+                        <div
+                            key={i}
+                            className="relative flex gap-3 items-center bg-gray-50 border border-gray-200 rounded-lg px-3 py-2"
+                        >
                             <input
-                                type="text"
-                                value={row.name}
-                                placeholder="Card name"
+                                type="number"
+                                min={1}
+                                max={3}
+                                value={row.count}
                                 onChange={(e) =>
-                                    updateRow(i, 'name', e.target.value)
+                                    updateRow(i, 'count', e.target.value)
                                 }
-                                className="w-full border border-gray-200 rounded px-3 py-1"
+                                className="w-16 border border-gray-200 rounded px-2 py-1"
                             />
-                            {activeSuggestions[i]?.length ? (
-                                <ul className="absolute z-10 w-full bg-white border border-gray-300 rounded mt-1 max-h-40 overflow-y-auto shadow-md">
-                                    {activeSuggestions[i].map(
-                                        (suggestion, idx) => (
+                            <div className="flex-1 relative">
+                                <input
+                                    type="text"
+                                    value={row.name}
+                                    placeholder="Card name"
+                                    onChange={(e) =>
+                                        updateRow(i, 'name', e.target.value)
+                                    }
+                                    onKeyDown={(e) => {
+                                        if (!suggestions.length) return
+                                        let newIndex = highlighted
+
+                                        if (e.key === 'ArrowDown') {
+                                            newIndex =
+                                                (highlighted + 1) %
+                                                suggestions.length
+                                            e.preventDefault()
+                                        } else if (e.key === 'ArrowUp') {
+                                            newIndex =
+                                                (highlighted -
+                                                    1 +
+                                                    suggestions.length) %
+                                                suggestions.length
+                                            e.preventDefault()
+                                        } else if (e.key === 'Enter') {
+                                            selectSuggestion(
+                                                i,
+                                                suggestions[highlighted],
+                                            )
+                                            e.preventDefault()
+                                            newIndex = 0
+                                        }
+
+                                        setHighlightedIndex((prev) => ({
+                                            ...prev,
+                                            [i]: newIndex,
+                                        }))
+                                    }}
+                                    className="w-full border border-gray-200 rounded px-3 py-1"
+                                />
+                                {suggestions.length > 0 && (
+                                    <ul className="absolute z-10 w-full bg-white border border-gray-300 rounded mt-1 max-h-40 overflow-y-auto shadow-md">
+                                        {suggestions.map((sugg, idx) => (
                                             <li
                                                 key={idx}
                                                 onClick={() =>
-                                                    selectSuggestion(
-                                                        i,
-                                                        suggestion,
-                                                    )
+                                                    selectSuggestion(i, sugg)
                                                 }
-                                                className="px-3 py-1 hover:bg-blue-100 cursor-pointer"
+                                                className={`px-3 py-1 cursor-pointer ${
+                                                    idx === highlighted
+                                                        ? 'bg-blue-200'
+                                                        : 'hover:bg-blue-100'
+                                                }`}
                                             >
-                                                {suggestion}
+                                                {sugg}
                                             </li>
-                                        ),
-                                    )}
-                                </ul>
-                            ) : null}
+                                        ))}
+                                    </ul>
+                                )}
+                            </div>
+                            <button
+                                onClick={() => removeRow(i)}
+                                className="px-2 py-1 text-sm bg-red-400 text-white rounded"
+                            >
+                                Remove
+                            </button>
                         </div>
-                        <button
-                            onClick={() => removeRow(i)}
-                            className="px-2 py-1 text-sm bg-red-400 text-white rounded"
-                        >
-                            Remove
-                        </button>
-                    </div>
-                ))}
+                    )
+                })}
 
-                {/* ----------------- Action Buttons ----------------- */}
                 <div className="flex gap-3 pt-3 items-center">
                     <button
                         onClick={addRow}
@@ -453,7 +493,7 @@ function Step1({ expanded, toggle, deckProps }: any) {
         </Panel>
     )
 }
-// ---------------- Step 2 ----------------
+
 function Step2({ expanded, toggle, handProps }: any) {
     const {
         hands,
@@ -589,7 +629,6 @@ function Step2({ expanded, toggle, handProps }: any) {
     )
 }
 
-// ---------------- Step 3 ----------------
 function Step3({ expanded, toggle, analysisProps }: any) {
     const { hands, job, loading, loadingMessage, runAnalysis } = analysisProps
 
