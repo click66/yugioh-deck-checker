@@ -5,7 +5,7 @@ import os
 
 import boto3
 from datetime import datetime
-from transform import process_cards
+from app.transform import process_cards
 
 SOURCE_URL = "https://db.ygoprodeck.com/api/v7/cardinfo.php"
 
