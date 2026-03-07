@@ -64,8 +64,15 @@ export default function App() {
         const cleaned = deck
             .filter((d) => d.name.trim() !== '')
             .map((d) => ({ name: d.name, count: Number(d.count) || 0 }))
+
+        const validCardNames = new Set(cleaned.map((d) => d.name))
+
+        const filteredHands = hands.filter((hand) =>
+            hand.every((card) => validCardNames.has(card)),
+        )
+
         setDeck(cleaned)
-        setHands([])
+        setHands(filteredHands)
         setJob(null)
         setExpandedSteps({ 1: false, 2: true, 3: false })
     }
@@ -82,6 +89,7 @@ export default function App() {
     const runAnalysis = async () => {
         if (deck.length === 0 || hands.length === 0) return
         setLoading(true)
+        setExpandedSteps({ 1: false, 2: false, 3: true })
 
         const names = deck.map((d) => d.name)
         const ratios = deck.map((d) => Number(d.count) || 0)
@@ -281,7 +289,7 @@ function Step1({ expanded, toggle, deckProps }: any) {
                         />
                         <button
                             onClick={() => removeRow(i)}
-                            className="px-2 py-1 text-sm bg-red-400 text-white rounded"
+                            className="px-2 py-1 text-sm bg-red-400 text-white rounded cursor-pointer"
                         >
                             Remove
                         </button>
@@ -291,13 +299,19 @@ function Step1({ expanded, toggle, deckProps }: any) {
                 <div className="flex gap-3 pt-3">
                     <button
                         onClick={addRow}
-                        className="px-4 py-2 bg-gray-200 rounded"
+                        className="px-4 py-2 bg-gray-200 rounded cursor-pointer"
                     >
                         Add Card
                     </button>
                     <button
+                        onClick={() => setDeck([])}
+                        className="px-4 py-2 bg-red-400 text-white rounded cursor-pointer"
+                    >
+                        Clear Deck
+                    </button>
+                    <button
                         onClick={parseDeck}
-                        className="px-5 py-2 bg-blue-500 text-white rounded"
+                        className="px-5 py-2 bg-blue-500 text-white rounded cursor-pointer"
                     >
                         Next
                     </button>
@@ -329,7 +343,7 @@ function Step2({ expanded, toggle, handProps }: any) {
         >
             <button
                 onClick={() => setShowHandModal(true)}
-                className="mb-4 px-4 py-2 bg-green-500 text-white rounded"
+                className="mb-4 px-4 py-2 bg-green-500 text-white rounded cursor-pointer"
             >
                 Add Ideal Hand
             </button>
@@ -354,7 +368,7 @@ function Step2({ expanded, toggle, handProps }: any) {
                                     ),
                                 )
                             }
-                            className="text-red-400 text-sm"
+                            className="text-red-400 text-sm cursor-pointer"
                         >
                             remove
                         </button>
@@ -399,7 +413,11 @@ function Step2({ expanded, toggle, handProps }: any) {
                                                 setNewHand([...newHand, d.name])
                                             }
                                         }}
-                                        className={`px-3 py-2 rounded-lg border ${selected ? 'bg-blue-500 text-white border-blue-500' : 'border-gray-200 hover:bg-gray-50'}`}
+                                        className={`px-3 py-2 rounded-lg border cursor-pointer ${
+                                            selected
+                                                ? 'bg-blue-500 text-white border-blue-500'
+                                                : 'border-gray-200 hover:bg-gray-50'
+                                        }`}
                                     >
                                         {d.name}
                                     </button>
@@ -410,13 +428,14 @@ function Step2({ expanded, toggle, handProps }: any) {
                         <div className="flex justify-end gap-3 mt-5">
                             <button
                                 onClick={() => setShowHandModal(false)}
-                                className="px-4 py-2 bg-gray-200 rounded"
+                                className="px-4 py-2 bg-gray-200 rounded cursor-pointer"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={addHand}
-                                className="px-4 py-2 bg-blue-500 text-white rounded"
+                                disabled={newHand.length === 0}
+                                className="px-4 py-2 bg-blue-500 text-white rounded cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 Save
                             </button>
@@ -442,7 +461,7 @@ function Step3({ expanded, toggle, analysisProps }: any) {
                 <button
                     onClick={runAnalysis}
                     disabled={hands.length === 0}
-                    className="px-5 py-2 bg-purple-500 text-white rounded disabled:opacity-50"
+                    className="px-5 py-2 bg-purple-500 text-white rounded cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     Run Analysis
                 </button>
@@ -457,21 +476,14 @@ function Step3({ expanded, toggle, analysisProps }: any) {
                 </div>
             )}
 
-            {job?.result && (
-                <div className="mt-4 bg-gray-50 border border-gray-200 rounded-lg p-4">
-                    {job?.result?.value && (
-                        <div className="mt-4 bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
-                            <div className="text-gray-600 text-sm mb-2">
-                                Probability of opening an ideal hand:
-                            </div>
-                            <div className="text-2xl font-semibold text-purple-600">
-                                {(parseFloat(job.result.value) * 100).toFixed(
-                                    2,
-                                )}
-                                %
-                            </div>
-                        </div>
-                    )}
+            {job?.result?.value && (
+                <div className="mt-4 bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
+                    <div className="text-gray-600 text-sm mb-2">
+                        Probability of opening an ideal hand:
+                    </div>
+                    <div className="text-2xl font-semibold text-purple-600">
+                        {(parseFloat(job.result.value) * 100).toFixed(2)}%
+                    </div>
                 </div>
             )}
         </Panel>
