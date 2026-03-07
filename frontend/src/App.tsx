@@ -1,8 +1,17 @@
-import React, { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createJob, getJob } from './services/consistency'
 import type { ConsistencyJobResponse } from './services/consistency'
 
-type DeckLine = { count: number; name: string }
+type DeckLine = { name: string; count: number | '' }
+
+const loadingMessages = [
+    'Shuffling the deck...',
+    'Drawing opening hands...',
+    'Consulting the heart of the cards...',
+    'Simulating thousands of duels...',
+    'Checking combo consistency...',
+    'Calculating probabilities...',
+]
 
 export default function App() {
     const [expandedSteps, setExpandedSteps] = useState<{
@@ -13,307 +22,441 @@ export default function App() {
         3: false,
     })
 
-    // Step 1
-    const [deckText, setDeckText] = useState('')
-    const [deck, setDeck] = useState<DeckLine[]>([])
-
-    // Step 2
+    const [deckSize, setDeckSize] = useState(40)
+    const defaultDeckLine = { name: 'Branded Fusion', count: 1 }
+    const [deck, setDeck] = useState<DeckLine[]>([defaultDeckLine])
     const [hands, setHands] = useState<string[][]>([])
     const [showHandModal, setShowHandModal] = useState(false)
     const [newHand, setNewHand] = useState<string[]>([])
-
-    // Step 3
     const [job, setJob] = useState<ConsistencyJobResponse | null>(null)
     const [loading, setLoading] = useState(false)
+    const [loadingMessage, setLoadingMessage] = useState(
+        loadingMessages[Math.floor(Math.random() * loadingMessages.length)],
+    )
 
-    // --- Step 1 logic ---
-    const parseDeck = () => {
-        const lines = deckText
-            .split('\n')
-            .map((l) => l.trim())
-            .filter(Boolean)
-        const parsed: DeckLine[] = []
-        for (const line of lines) {
-            const match = line.match(/^(\d+)\s+(.+)$/)
-            if (match) {
-                parsed.push({ count: Number(match[1]), name: match[2].trim() })
-            }
-        }
-        setDeck(parsed)
+    useEffect(() => {
+        if (!loading) return
 
-        // Clear existing hands and reset job if deck changed
-        setHands([])
-        setJob(null)
+        const interval = setInterval(() => {
+            setLoadingMessage(
+                loadingMessages[
+                    Math.floor(Math.random() * loadingMessages.length)
+                ],
+            )
+        }, 5000)
 
-        // Collapse Step 1, expand Step 2
-        setExpandedSteps((prev) => ({ ...prev, 1: false, 2: true }))
+        return () => clearInterval(interval)
+    }, [loading])
+
+    const toggleStep = (step: number) => {
+        if (step === 3 && loading) return
+        setExpandedSteps((prev) => ({ ...prev, [step]: !prev[step] }))
     }
 
-    // --- Step 2 logic ---
+    const parseDeck = () => {
+        const cleaned = deck
+            .filter((d) => d.name.trim() !== '')
+            .map((d) => ({ name: d.name, count: Number(d.count) || 0 }))
+        setDeck(cleaned)
+        setHands([])
+        setJob(null)
+        setExpandedSteps({ 1: false, 2: true, 3: false })
+    }
+
     const addHand = () => {
         if (newHand.length > 0) {
             setHands([...hands, newHand])
             setNewHand([])
             setShowHandModal(false)
-            // Step 2 stays expanded; Step 3 expands
             setExpandedSteps((prev) => ({ ...prev, 3: true }))
         }
     }
 
-    // --- Step 3 logic ---
     const runAnalysis = async () => {
-        if (deck.length === 0) return
+        if (deck.length === 0 || hands.length === 0) return
         setLoading(true)
 
         const names = deck.map((d) => d.name)
-        const ratios = deck.map((d) => d.count)
+        const ratios = deck.map((d) => Number(d.count) || 0)
 
         const payload = {
-            deckcount: 40,
+            deckcount: deckSize,
             names,
             ratios,
             ideal_hands: hands,
             num_hands: hands.length,
         }
 
-        try {
-            const jobResp = await createJob(payload)
-            setJob(jobResp)
+        const jobResp = await createJob(payload)
+        setJob(jobResp)
 
-            const poll = async () => {
-                if (!jobResp.jobId) return
-                const result = await getJob(jobResp.jobId)
-                setJob(result)
-                if (result.status !== 'done') {
-                    setTimeout(poll, 5000)
-                }
-            }
-            poll()
-        } finally {
-            setLoading(false)
+        const poll = async () => {
+            if (!jobResp.jobId) return
+            const result = await getJob(jobResp.jobId)
+            setJob(result)
+            if (result.status === 'done') setLoading(false)
+            else setTimeout(poll, 5000)
         }
+        poll()
     }
 
-    const toggleStep = (step: number) => {
-        setExpandedSteps((prev) => ({ ...prev, [step]: !prev[step] }))
+    // Grouped prop objects
+    const deckProps = { deck, setDeck, deckSize, setDeckSize, parseDeck }
+    const handProps = {
+        hands,
+        setHands,
+        newHand,
+        setNewHand,
+        showHandModal,
+        setShowHandModal,
+        addHand,
+        deck,
     }
+    const analysisProps = { hands, job, loading, loadingMessage, runAnalysis }
 
     return (
-        <div className="p-4 space-y-4 max-w-3xl mx-auto">
-            <Step1
-                expanded={expandedSteps[1]}
-                toggle={() => toggleStep(1)}
-                deckText={deckText}
-                setDeckText={setDeckText}
-                parseDeck={parseDeck}
-            />
-            <Step2
-                expanded={expandedSteps[2]}
-                toggle={() => toggleStep(2)}
-                deck={deck}
-                hands={hands}
-                showHandModal={showHandModal}
-                setShowHandModal={setShowHandModal}
-                newHand={newHand}
-                setNewHand={setNewHand}
-                addHand={addHand}
-            />
-            <Step3
-                expanded={expandedSteps[3]}
-                toggle={() => toggleStep(3)}
-                deck={deck}
-                hands={hands}
-                runAnalysis={runAnalysis}
-                loading={loading}
-                job={job}
-            />
+        <>
+            <div className="bg-gray-50 py-10">
+                <div className="max-w-3xl mx-auto space-y-6">
+                    <h1 className="text-3xl font-semibold text-center text-gray-800">
+                        Yu-Gi-Oh Deck Consistency Analysis
+                    </h1>
+
+                    <p className="px-2">
+                        A tool for estimating a deck's consistency at drawing
+                        specific hands.
+                    </p>
+                    <p className="px-2">
+                        Configure your deck and create a set of ideal hands; the
+                        analysis will generate 1 million random hands to give an
+                        actual result of how often you will open one of your
+                        ideal hands.
+                    </p>
+
+                    <Step1
+                        expanded={expandedSteps[1]}
+                        toggle={() => toggleStep(1)}
+                        deckProps={deckProps}
+                    />
+                    <Step2
+                        expanded={expandedSteps[2]}
+                        toggle={() => toggleStep(2)}
+                        handProps={handProps}
+                    />
+                    <Step3
+                        expanded={expandedSteps[3]}
+                        toggle={() => toggleStep(3)}
+                        analysisProps={analysisProps}
+                    />
+                </div>
+            </div>
+            <footer className="w-full bg-gray-100 border-t border-gray-300 mt-10">
+                <div className="max-w-3xl mx-auto text-center text-gray-700 space-y-1 py-4 px-3 text-sm">
+                    <p>
+                        Adapted from code championed and shared by{' '}
+                        <a
+                            href="https://www.youtube.com/watch?v=-9sCMYEIeq8"
+                            className="text-blue-600 hover:underline"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            Lucas Sacco
+                        </a>
+                        .
+                    </p>
+                    <p>Original scripts written by Jeremy Glassman.</p>
+                    <p>
+                        Shout out to mint and{' '}
+                        <a
+                            href="https://www.deckcal.cc/"
+                            className="text-blue-600 hover:underline"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            deckcal.cc
+                        </a>{' '}
+                        for some design inspiration.
+                    </p>
+                </div>
+            </footer>
+        </>
+    )
+}
+
+// Generic panel wrapper
+function Panel({ title, expanded, toggle, children }: any) {
+    return (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+            <div
+                className="px-5 py-3 border-b border-gray-200 font-medium text-lg cursor-pointer flex justify-between"
+                onClick={toggle}
+            >
+                {title}
+                <span className="text-gray-400">{expanded ? '−' : '+'}</span>
+            </div>
+            {expanded && <div className="p-5">{children}</div>}
         </div>
     )
 }
 
 // ---------------- Step 1 ----------------
-type Step1Props = {
-    expanded: boolean
-    toggle: () => void
-    deckText: string
-    setDeckText: React.Dispatch<React.SetStateAction<string>>
-    parseDeck: () => void
-}
-function Step1({
-    expanded,
-    toggle,
-    deckText,
-    setDeckText,
-    parseDeck,
-}: Step1Props) {
+function Step1({ expanded, toggle, deckProps }: any) {
+    const { deck, setDeck, deckSize, setDeckSize, parseDeck } = deckProps
+
+    const updateRow = (
+        index: number,
+        field: 'name' | 'count',
+        value: string,
+    ) => {
+        const updated = [...deck]
+        if (field === 'count')
+            updated[index].count = value === '' ? '' : Number(value)
+        else updated[index].name = value
+        setDeck(updated)
+    }
+
+    const addRow = () => setDeck([...deck, { name: '', count: 1 }])
+    const removeRow = (i: number) =>
+        setDeck(deck.filter((_: any, idx: number) => idx !== i))
+
+    const enteredTotal = deck.reduce(
+        (acc: number, d: DeckLine) => acc + (Number(d.count) || 0),
+        0,
+    )
+    const blankCount = Math.max(deckSize - enteredTotal, 0)
+
     return (
-        <div className="border rounded shadow p-4">
-            <h2 className="font-bold cursor-pointer" onClick={toggle}>
-                Step 1: Deck Selection
-            </h2>
-            {expanded && (
-                <div className="mt-2">
-                    <textarea
-                        className="w-full border p-2"
-                        rows={10}
-                        value={deckText}
-                        onChange={(e) => setDeckText(e.target.value)}
-                        placeholder="Enter deck list..."
-                    />
+        <Panel
+            title="Step 1 — Configure Deck"
+            expanded={expanded}
+            toggle={toggle}
+        >
+            <div className="mb-4">
+                <label className="text-sm text-gray-600">Deck size</label>
+                <input
+                    type="number"
+                    value={deckSize}
+                    onChange={(e) => setDeckSize(Number(e.target.value))}
+                    className="ml-3 w-24 border border-gray-200 rounded px-2 py-1"
+                />
+            </div>
+
+            <div className="space-y-3">
+                {/* Blank Card placeholder on top */}
+                <div className="flex gap-3 items-center bg-gray-100 border border-dashed border-gray-300 rounded-lg px-3 py-2 text-gray-500">
+                    <div className="w-16 text-center">{blankCount}</div>
+                    <div className="flex-1 italic">Blank Card</div>
+                </div>
+
+                {deck.map((row: DeckLine, i: number) => (
+                    <div
+                        key={i}
+                        className="flex gap-3 items-center bg-gray-50 border border-gray-200 rounded-lg px-3 py-2"
+                    >
+                        <input
+                            type="number"
+                            min={1}
+                            max={3}
+                            value={row.count}
+                            onChange={(e) =>
+                                updateRow(i, 'count', e.target.value)
+                            }
+                            className="w-16 border border-gray-200 rounded px-2 py-1"
+                        />
+                        <input
+                            type="text"
+                            value={row.name}
+                            placeholder="Card name"
+                            onChange={(e) =>
+                                updateRow(i, 'name', e.target.value)
+                            }
+                            className="flex-1 border border-gray-200 rounded px-3 py-1"
+                        />
+                        <button
+                            onClick={() => removeRow(i)}
+                            className="px-2 py-1 text-sm bg-red-400 text-white rounded"
+                        >
+                            Remove
+                        </button>
+                    </div>
+                ))}
+
+                <div className="flex gap-3 pt-3">
                     <button
-                        className="mt-2 px-4 py-2 bg-blue-500 text-white rounded"
+                        onClick={addRow}
+                        className="px-4 py-2 bg-gray-200 rounded"
+                    >
+                        Add Card
+                    </button>
+                    <button
                         onClick={parseDeck}
+                        className="px-5 py-2 bg-blue-500 text-white rounded"
                     >
                         Next
                     </button>
                 </div>
-            )}
-        </div>
+            </div>
+        </Panel>
     )
 }
 
 // ---------------- Step 2 ----------------
-type Step2Props = {
-    expanded: boolean
-    toggle: () => void
-    deck: DeckLine[]
-    hands: string[][]
-    showHandModal: boolean
-    setShowHandModal: React.Dispatch<React.SetStateAction<boolean>>
-    newHand: string[]
-    setNewHand: React.Dispatch<React.SetStateAction<string[]>>
-    addHand: () => void
-}
-function Step2({
-    expanded,
-    toggle,
-    deck,
-    hands,
-    showHandModal,
-    setShowHandModal,
-    newHand,
-    setNewHand,
-    addHand,
-}: Step2Props) {
-    return (
-        <div className="border rounded shadow p-4">
-            <h2 className="font-bold cursor-pointer" onClick={toggle}>
-                Step 2: Ideal Hand Selection
-            </h2>
-            {expanded && (
-                <div className="mt-2">
-                    <button
-                        className="mb-2 px-4 py-2 bg-green-500 text-white rounded"
-                        onClick={() => setShowHandModal(true)}
-                    >
-                        Add New Hand
-                    </button>
-                    <ul className="space-y-1">
-                        {hands.map((hand, idx) => (
-                            <li key={idx} className="border p-2 rounded">
-                                {hand.join(', ')}
-                            </li>
-                        ))}
-                    </ul>
+function Step2({ expanded, toggle, handProps }: any) {
+    const {
+        hands,
+        setHands,
+        newHand,
+        setNewHand,
+        showHandModal,
+        setShowHandModal,
+        addHand,
+        deck,
+    } = handProps
+    const selectableDeck = deck.filter((d: DeckLine) => d.name !== 'Blank Card')
 
-                    {showHandModal && (
-                        <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
-                            <div className="bg-white p-6 rounded max-w-2xl w-full">
-                                <h3 className="font-bold mb-2">Select Cards</h3>
-                                <div className="grid grid-cols-2 gap-2 max-h-80 overflow-y-auto">
-                                    {deck.map((d) => (
-                                        <label
-                                            key={d.name}
-                                            className="flex items-center space-x-2 border p-1 rounded"
-                                        >
-                                            <input
-                                                type="checkbox"
-                                                checked={newHand.includes(
-                                                    d.name
-                                                )}
-                                                onChange={(e) => {
-                                                    if (e.target.checked)
-                                                        setNewHand([
-                                                            ...newHand,
-                                                            d.name,
-                                                        ])
-                                                    else
-                                                        setNewHand(
-                                                            newHand.filter(
-                                                                (n) =>
-                                                                    n !== d.name
-                                                            )
-                                                        )
-                                                }}
-                                            />
-                                            <span>{d.name}</span>
-                                        </label>
-                                    ))}
-                                </div>
-                                <div className="mt-4 flex justify-end space-x-2">
-                                    <button
-                                        className="px-3 py-1 bg-gray-300 rounded"
-                                        onClick={() => setShowHandModal(false)}
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        className="px-3 py-1 bg-blue-500 text-white rounded"
-                                        onClick={addHand}
-                                    >
-                                        Save
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
+    return (
+        <Panel
+            title="Step 2 — Define Ideal Hands"
+            expanded={expanded}
+            toggle={toggle}
+        >
+            <button
+                onClick={() => setShowHandModal(true)}
+                className="mb-4 px-4 py-2 bg-green-500 text-white rounded"
+            >
+                Add Ideal Hand
+            </button>
+            {hands.length === 0 && (
+                <div className="text-gray-500 text-sm">
+                    No ideal hands defined yet.
                 </div>
             )}
-        </div>
+
+            <div className="space-y-2">
+                {hands.map((hand: string[], i: number) => (
+                    <div
+                        key={i}
+                        className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 flex justify-between"
+                    >
+                        <span>{hand.join(', ')}</span>
+                        <button
+                            onClick={() =>
+                                setHands(
+                                    hands.filter(
+                                        (_: any, idx: number) => idx !== i,
+                                    ),
+                                )
+                            }
+                            className="text-red-400 text-sm"
+                        >
+                            remove
+                        </button>
+                    </div>
+                ))}
+            </div>
+
+            {showHandModal && (
+                <div
+                    className="fixed inset-0 bg-black/30 flex items-center justify-center"
+                    onClick={() => setShowHandModal(false)}
+                >
+                    <div
+                        className="bg-white rounded-xl shadow-lg p-6 w-full max-w-xl"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <h3 className="text-lg font-medium mb-4">
+                            Select Cards
+                        </h3>
+
+                        {newHand.length > 0 && (
+                            <div className="mb-3 text-sm text-gray-700">
+                                Selected: {newHand.join(', ')}
+                            </div>
+                        )}
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-80 overflow-y-auto">
+                            {selectableDeck.map((d: any) => {
+                                const selected = newHand.includes(d.name)
+                                return (
+                                    <button
+                                        key={d.name}
+                                        type="button"
+                                        onClick={() => {
+                                            if (selected) {
+                                                setNewHand(
+                                                    newHand.filter(
+                                                        (n: string) =>
+                                                            n !== d.name,
+                                                    ),
+                                                )
+                                            } else {
+                                                setNewHand([...newHand, d.name])
+                                            }
+                                        }}
+                                        className={`px-3 py-2 rounded-lg border ${selected ? 'bg-blue-500 text-white border-blue-500' : 'border-gray-200 hover:bg-gray-50'}`}
+                                    >
+                                        {d.name}
+                                    </button>
+                                )
+                            })}
+                        </div>
+
+                        <div className="flex justify-end gap-3 mt-5">
+                            <button
+                                onClick={() => setShowHandModal(false)}
+                                className="px-4 py-2 bg-gray-200 rounded"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={addHand}
+                                className="px-4 py-2 bg-blue-500 text-white rounded"
+                            >
+                                Save
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </Panel>
     )
 }
 
 // ---------------- Step 3 ----------------
-type Step3Props = {
-    expanded: boolean
-    toggle: () => void
-    deck: DeckLine[]
-    hands: string[][]
-    runAnalysis: () => void
-    loading: boolean
-    job: ConsistencyJobResponse | null
-}
-function Step3({ expanded, toggle, runAnalysis, loading, job }: Step3Props) {
-    return (
-        <div className="border rounded shadow p-4">
-            <h2 className="font-bold cursor-pointer" onClick={toggle}>
-                Step 3: Run Analysis
-            </h2>
-            {expanded && (
-                <div className="mt-2">
-                    <button
-                        className="px-4 py-2 bg-purple-500 text-white rounded flex items-center space-x-2"
-                        onClick={runAnalysis}
-                        disabled={loading}
-                    >
-                        {loading && (
-                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        )}
-                        <span>{loading ? 'Running' : 'Run Analysis'}</span>
-                    </button>
+function Step3({ expanded, toggle, analysisProps }: any) {
+    const { hands, job, loading, loadingMessage, runAnalysis } = analysisProps
 
-                    {job && (
-                        <div className="mt-2">
-                            <p>Status: {job.status}</p>
-                            {job.result && (
-                                <pre className="bg-gray-100 p-2 rounded">
-                                    {JSON.stringify(job.result, null, 2)}
-                                </pre>
-                            )}
-                        </div>
-                    )}
+    return (
+        <Panel
+            title="Step 3 — Run Analysis"
+            expanded={expanded}
+            toggle={() => !loading && toggle()}
+        >
+            {!loading && (
+                <button
+                    onClick={runAnalysis}
+                    disabled={hands.length === 0}
+                    className="px-5 py-2 bg-purple-500 text-white rounded disabled:opacity-50"
+                >
+                    Run Analysis
+                </button>
+            )}
+
+            {loading && (
+                <div className="flex flex-col items-center gap-4 py-6">
+                    <div className="w-10 h-10 border-4 border-purple-400 border-t-transparent rounded-full animate-spin"></div>
+                    <div className="text-gray-600 text-sm">
+                        {loadingMessage}
+                    </div>
                 </div>
             )}
-        </div>
+
+            {job?.result && (
+                <div className="mt-4 bg-gray-50 border border-gray-200 rounded-lg p-4">
+                    <pre className="text-sm text-gray-600 whitespace-pre-wrap">
+                        {JSON.stringify(job.result, null, 2)}
+                    </pre>
+                </div>
+            )}
+        </Panel>
     )
 }
