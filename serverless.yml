@@ -17,6 +17,10 @@ provider:
         path: ./functions/consistency
         file: Dockerfile
         platform: linux/amd64
+      load-card-database:
+        path: ./functions/load-card-database
+        file: Dockerfile
+        platform: linux/amd64
 
   iam:
     role:
@@ -46,12 +50,28 @@ functions:
       - httpApi:
           path: /{proxy+}
           method: ANY
+
   consistency:
     image:
       name: consistency
     environment:
       ENV_PREFIX: "${self:service}-${opt:stage, self:provider.stage, 'prod'}"
     timeout: 300
+
+  load-card-database:
+    image:
+      name: load-card-database
+    timeout: 300
+    environment:
+      FRONTEND_BUCKET: "${self:custom.frontend.bucketName}"
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - s3:PutObject
+        Resource:
+          - "arn:aws:s3:::${self:custom.card-database.bucketName}/*"
+          - "arn:aws:s3:::${self:custom.frontend.bucketName}/data/*"
+          - "arn:aws:s3:::${self:custom.frontend.bucketName}/database-latest.json"
 
 custom:
   card-database:
@@ -84,7 +104,7 @@ resources:
             - AllowedMethods:
                 - GET
               AllowedOrigins:
-                - https://your-frontend-domain.com
+                - "https://${self:custom.frontend.cloudFrontDomain}"
               AllowedHeaders:
                 - "*"
 

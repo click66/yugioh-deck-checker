@@ -3,3 +3,8 @@ services:
     build:
       context: ./consistency
       target: build
+
+  function-load-card-database:
+    build:
+      context: ./load-card-database
+      target: build
