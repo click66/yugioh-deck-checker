@@ -15,6 +15,7 @@ export const ConsistencyJobSchema = z.object({
     result: z
         .object({
             value: z.string(),
+            value_6: z.string(),
         })
         .optional()
         .nullable(),
