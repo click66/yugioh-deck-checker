@@ -59,8 +59,11 @@ jobs:
 
       - name: Deploy frontend to S3
         run: |
-          aws s3 sync ./frontend/dist s3://${FRONTEND_BUCKET} --delete --cache-control max-age=31536000
-
+          aws s3 sync ./frontend/dist s3://${FRONTEND_BUCKET} \
+            --delete \
+            --exclude "database-latest.json" \
+            --exclude "data/*" \
+            --cache-control max-age=31536000
       - name: Invalidate CloudFront cache
         run: |
           aws cloudfront create-invalidation \
