@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { createJob, getJob, JobStatus } from './services/consistency'
 import type { ConsistencyJobResponse } from './services/consistency'
-import { useCardDatabase } from './hooks/useCardDatabase';
+import { useCardDatabase } from './hooks/useCardDatabase'
 
 type DeckLine = { name: string; count: number | '' }
 type Card = string
@@ -244,12 +244,14 @@ function Panel({ title, expanded, toggle, children }: any) {
     )
 }
 
-// ---------------- Step 1 ----------------
 function Step1({ expanded, toggle, deckProps }: any) {
-    useCardDatabase()
-    
+    const { cards: cardDatabase } = useCardDatabase()
     const { deck, setDeck, deckSize, setDeckSize, parseDeck, clearDeck } =
         deckProps
+
+    const [activeSuggestions, setActiveSuggestions] = useState<
+        Record<number, string[]>
+    >({})
 
     const updateRow = (
         index: number,
@@ -259,8 +261,26 @@ function Step1({ expanded, toggle, deckProps }: any) {
         const updated = [...deck]
         if (field === 'count')
             updated[index].count = value === '' ? '' : Number(value)
-        else updated[index].name = value
+        else {
+            updated[index].name = value
+            const matches = value
+                ? cardDatabase
+                      .filter((c) =>
+                          c.name.toLowerCase().includes(value.toLowerCase()),
+                      )
+                      .slice(0, 5)
+                      .map((c) => c.name)
+                : []
+            setActiveSuggestions((prev) => ({ ...prev, [index]: matches }))
+        }
         setDeck(updated)
+    }
+
+    const selectSuggestion = (index: number, name: string) => {
+        const updated = [...deck]
+        updated[index].name = name
+        setDeck(updated)
+        setActiveSuggestions((prev) => ({ ...prev, [index]: [] }))
     }
 
     const addRow = () => setDeck([...deck, { name: '', count: 1 }])
@@ -273,6 +293,52 @@ function Step1({ expanded, toggle, deckProps }: any) {
     )
     const blankCount = Math.max(deckSize - enteredTotal, 0)
 
+    // ------------------ YDK Import ------------------
+    const importYdkFile = (file: File) => {
+        const reader = new FileReader()
+        reader.onload = () => {
+            if (!reader.result) return
+
+            const lines = (reader.result as string)
+                .split(/\r?\n/)
+                .map((line) => line.trim())
+
+            let inMain = false
+            const mainIds: number[] = []
+
+            for (const line of lines) {
+                if (line.startsWith('#main')) {
+                    inMain = true
+                    continue
+                }
+                if (line.startsWith('#') || line.startsWith('!')) {
+                    if (line !== '#main') inMain = false
+                    continue
+                }
+                if (inMain && /^\d+$/.test(line)) {
+                    mainIds.push(Number(line))
+                }
+            }
+
+            const countMap = new Map<number, number>()
+            mainIds.forEach((id) =>
+                countMap.set(id, (countMap.get(id) || 0) + 1),
+            )
+
+            const importedDeck: DeckLine[] = Array.from(countMap.entries())
+                .map(([id, count]) => {
+                    const card = cardDatabase.find((c) => c.id === id)
+                    return card
+                        ? { name: card.name, count: count as number | '' }
+                        : undefined
+                })
+                .filter((c): c is DeckLine => !!c)
+
+            setDeck(importedDeck)
+        }
+
+        reader.readAsText(file)
+    }
     return (
         <Panel
             title="Step 1 — Configure Deck"
@@ -298,7 +364,7 @@ function Step1({ expanded, toggle, deckProps }: any) {
                 {deck.map((row: DeckLine, i: number) => (
                     <div
                         key={i}
-                        className="flex gap-3 items-center bg-gray-50 border border-gray-200 rounded-lg px-3 py-2"
+                        className="relative flex gap-3 items-center bg-gray-50 border border-gray-200 rounded-lg px-3 py-2"
                     >
                         <input
                             type="number"
@@ -310,49 +376,83 @@ function Step1({ expanded, toggle, deckProps }: any) {
                             }
                             className="w-16 border border-gray-200 rounded px-2 py-1"
                         />
-                        <input
-                            type="text"
-                            value={row.name}
-                            placeholder="Card name"
-                            onChange={(e) =>
-                                updateRow(i, 'name', e.target.value)
-                            }
-                            className="flex-1 border border-gray-200 rounded px-3 py-1"
-                        />
+                        <div className="flex-1 relative">
+                            <input
+                                type="text"
+                                value={row.name}
+                                placeholder="Card name"
+                                onChange={(e) =>
+                                    updateRow(i, 'name', e.target.value)
+                                }
+                                className="w-full border border-gray-200 rounded px-3 py-1"
+                            />
+                            {activeSuggestions[i]?.length ? (
+                                <ul className="absolute z-10 w-full bg-white border border-gray-300 rounded mt-1 max-h-40 overflow-y-auto shadow-md">
+                                    {activeSuggestions[i].map(
+                                        (suggestion, idx) => (
+                                            <li
+                                                key={idx}
+                                                onClick={() =>
+                                                    selectSuggestion(
+                                                        i,
+                                                        suggestion,
+                                                    )
+                                                }
+                                                className="px-3 py-1 hover:bg-blue-100 cursor-pointer"
+                                            >
+                                                {suggestion}
+                                            </li>
+                                        ),
+                                    )}
+                                </ul>
+                            ) : null}
+                        </div>
                         <button
                             onClick={() => removeRow(i)}
-                            className="px-2 py-1 text-sm bg-red-400 text-white rounded "
+                            className="px-2 py-1 text-sm bg-red-400 text-white rounded"
                         >
                             Remove
                         </button>
                     </div>
                 ))}
 
-                <div className="flex gap-3 pt-3">
+                {/* ----------------- Action Buttons ----------------- */}
+                <div className="flex gap-3 pt-3 items-center">
                     <button
                         onClick={addRow}
-                        className="px-4 py-2 bg-gray-200 rounded "
+                        className="px-4 py-2 bg-gray-200 rounded"
                     >
                         Add Card
                     </button>
                     <button
                         onClick={parseDeck}
-                        className="px-5 py-2 bg-blue-500 text-white rounded "
+                        className="px-5 py-2 bg-blue-500 text-white rounded"
                     >
                         Next
                     </button>
                     <button
                         onClick={clearDeck}
-                        className="px-4 py-2 bg-red-500 text-white rounded "
+                        className="px-4 py-2 bg-red-500 text-white rounded"
                     >
                         Clear Deck
                     </button>
+                    <label className="px-4 py-2 bg-green-500 text-white rounded cursor-pointer hover:bg-green-600">
+                        Import YDK
+                        <input
+                            type="file"
+                            accept=".ydk,text/plain"
+                            onChange={(e) =>
+                                e.target.files?.[0] &&
+                                importYdkFile(e.target.files[0])
+                            }
+                            className="hidden"
+                        />
+                    </label>
                 </div>
             </div>
         </Panel>
     )
 }
-
 // ---------------- Step 2 ----------------
 function Step2({ expanded, toggle, handProps }: any) {
     const {
