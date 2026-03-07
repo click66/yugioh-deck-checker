@@ -63,7 +63,7 @@ functions:
       name: load-card-database
     timeout: 300
     environment:
-      FRONTEND_BUCKET: "${self:custom.frontend.bucketName}"
+      ENV_PREFIX: "${self:service}-${opt:stage, self:provider.stage, 'prod'}"
     iamRoleStatements:
       - Effect: Allow
         Action:
