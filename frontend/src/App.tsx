@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { createJob, getJob, JobStatus } from './services/consistency'
 import type { ConsistencyJobResponse } from './services/consistency'
+import { useCardDatabase } from './hooks/useCardDatabase';
 
 type DeckLine = { name: string; count: number | '' }
 type Card = string
@@ -245,6 +246,8 @@ function Panel({ title, expanded, toggle, children }: any) {
 
 // ---------------- Step 1 ----------------
 function Step1({ expanded, toggle, deckProps }: any) {
+    useCardDatabase()
+    
     const { deck, setDeck, deckSize, setDeckSize, parseDeck, clearDeck } =
         deckProps
 
