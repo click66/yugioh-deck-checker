@@ -3,8 +3,8 @@ import { createJob, getJob, JobStatus } from './services/consistency'
 import type { ConsistencyJobResponse } from './services/consistency'
 import { useCardDatabase } from './hooks/useCardDatabase'
 
-type DeckLine = { name: string; count: number | '' }
-type Card = string
+type Card = { id: number; name: string }
+type DeckLine = { card: Card | null; count: number | '' }
 
 const loadingMessages = [
     'Shuffling the deck',
@@ -34,26 +34,33 @@ export default function App() {
         3: false,
     })
 
-    const defaultDeckLine = { name: 'Branded Fusion', count: 1 }
+    const defaultDeckLine = {
+        card: { id: 44362883, name: 'Branded Fusion' },
+        count: 1,
+    }
+
     const [deck, setDeck] = useState<DeckLine[]>(() => {
         const saved = localStorage.getItem(DECK_STORAGE_KEY)
-        return saved ? JSON.parse(saved) : [defaultDeckLine]
+        if (saved) {
+            return JSON.parse(saved)
+        }
+        return [defaultDeckLine]
     })
-    const [hands, setHands] = useState<string[][]>(() => {
+    console.log(deck)
+    const [hands, setHands] = useState<Card[][]>(() => {
         const saved = localStorage.getItem(HANDS_STORAGE_KEY)
         return saved ? JSON.parse(saved) : []
     })
 
     const [deckSize, setDeckSize] = useState(40)
     const [showHandModal, setShowHandModal] = useState(false)
-    const [newHand, setNewHand] = useState<string[]>([])
+    const [newHand, setNewHand] = useState<Card[]>([])
     const [job, setJob] = useState<ConsistencyJobResponse | null>(null)
     const [loading, setLoading] = useState(false)
     const [loadingMessage, setLoadingMessage] = useState(
         loadingMessages[Math.floor(Math.random() * loadingMessages.length)],
     )
 
-    // Persist deck & hands whenever they change
     useEffect(() => {
         localStorage.setItem(DECK_STORAGE_KEY, JSON.stringify(deck))
     }, [deck])
@@ -80,16 +87,14 @@ export default function App() {
     }
 
     const parseDeck = () => {
-        const cleaned = deck
-            .filter((d) => d.name.trim() !== '')
-            .map((d) => ({
-                name: d.name,
-                count: Number(d.count) || 0,
-            }))
+        const cleaned = deck.filter((d) => d.card !== null)
+
         setDeck(cleaned)
         setHands((prev) =>
             prev
-                .map((h) => h.filter((c) => cleaned.some((d) => d.name === c)))
+                .map((h) =>
+                    h.filter((c) => cleaned.some((d) => d.card?.id === c.id)),
+                )
                 .filter((h) => h.length > 0),
         )
         setJob(null)
@@ -105,23 +110,23 @@ export default function App() {
         }
     }
 
-    const clearDeck = () => {
-        setDeck([])
-    }
+    const clearDeck = () => setDeck([])
 
     const runAnalysis = async () => {
-        if (deck.length === 0 || hands.length === 0) return
+        if (deck.length === 0 || hands.length === 0) {
+            return
+        }
+
+        const validatedDeck = deck.filter((d) => d.card !== null)
+
         setLoading(true)
         setExpandedSteps((prev) => ({ ...prev, 2: false }))
 
-        const names = deck.map((d) => d.name)
-        const ratios = deck.map((d) => Number(d.count) || 0)
-
         const payload = {
             deckcount: deckSize,
-            names,
-            ratios,
-            ideal_hands: hands,
+            names: validatedDeck.map((d) => `${d.card!.id}`),
+            ratios: validatedDeck.map((d) => Number(d.count) || 0),
+            ideal_hands: hands.map((hand) => hand.map((c) => `${c.id}`)),
             num_hands: hands.length,
         }
 
@@ -229,11 +234,13 @@ export default function App() {
     )
 }
 
+// -------------------- Components --------------------
+
 function Panel({ title, expanded, toggle, children }: any) {
     return (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200">
             <div
-                className="px-5 py-3 border-b border-gray-200 font-medium text-lg  flex justify-between"
+                className="px-5 py-3 border-b border-gray-200 font-medium text-lg flex justify-between"
                 onClick={toggle}
             >
                 {title}
@@ -250,13 +257,13 @@ function Step1({ expanded, toggle, deckProps }: any) {
         deckProps
 
     const [activeSuggestions, setActiveSuggestions] = useState<
-        Record<number, string[]>
+        Record<number, Card[]>
     >({})
-
     const [highlightedIndex, setHighlightedIndex] = useState<
         Record<number, number>
     >({})
 
+    // Update a row
     const updateRow = (
         index: number,
         field: 'name' | 'count',
@@ -266,14 +273,13 @@ function Step1({ expanded, toggle, deckProps }: any) {
         if (field === 'count') {
             updated[index].count = value === '' ? '' : Number(value)
         } else {
-            updated[index].name = value
+            updated[index].name = value // temporary typed string
             const matches = value
                 ? cardDatabase
                       .filter((c) =>
                           c.name.toLowerCase().includes(value.toLowerCase()),
                       )
                       .slice(0, 5)
-                      .map((c) => c.name)
                 : []
             setActiveSuggestions((prev) => ({ ...prev, [index]: matches }))
             setHighlightedIndex((prev) => ({ ...prev, [index]: 0 }))
@@ -281,20 +287,22 @@ function Step1({ expanded, toggle, deckProps }: any) {
         setDeck(updated)
     }
 
-    const selectSuggestion = (index: number, name: string) => {
+    // Select suggestion
+    const selectSuggestion = (index: number, card: Card) => {
         const updated = [...deck]
-        updated[index].name = name
+        updated[index].card = card
+        updated[index].name = card.name
         setDeck(updated)
         setActiveSuggestions((prev) => ({ ...prev, [index]: [] }))
         setHighlightedIndex((prev) => ({ ...prev, [index]: 0 }))
     }
 
-    const addRow = () => setDeck([...deck, { name: '', count: 1 }])
+    const addRow = () => setDeck([...deck, { card: null, count: 1, name: '' }])
     const removeRow = (i: number) =>
         setDeck(deck.filter((_: any, idx: number) => idx !== i))
 
     const enteredTotal = deck.reduce(
-        (acc: number, d: DeckLine) => acc + (Number(d.count) || 0),
+        (acc: number, d: any) => acc + (Number(d.count) || 0),
         0,
     )
     const blankCount = Math.max(deckSize - enteredTotal, 0)
@@ -335,10 +343,10 @@ function Step1({ expanded, toggle, deckProps }: any) {
                 .map(([id, count]) => {
                     const card = cardDatabase.find((c) => c.id === id)
                     return card
-                        ? { name: card.name, count: count as number | '' }
+                        ? { card, count: count as number | '' }
                         : undefined
                 })
-                .filter((c): c is DeckLine => !!c)
+                .filter((c) => c !== undefined)
 
             setDeck(importedDeck)
         }
@@ -389,8 +397,9 @@ function Step1({ expanded, toggle, deckProps }: any) {
                             />
                             <div className="flex-1 relative">
                                 <input
+                                    key={row.card?.id ?? i}
                                     type="text"
-                                    value={row.name}
+                                    defaultValue={row.card?.name ?? ''}
                                     placeholder="Card name"
                                     onChange={(e) =>
                                         updateRow(i, 'name', e.target.value)
@@ -431,7 +440,7 @@ function Step1({ expanded, toggle, deckProps }: any) {
                                     <ul className="absolute z-10 w-full bg-white border border-gray-300 rounded mt-1 max-h-40 overflow-y-auto shadow-md">
                                         {suggestions.map((sugg, idx) => (
                                             <li
-                                                key={idx}
+                                                key={sugg.id}
                                                 onClick={() =>
                                                     selectSuggestion(i, sugg)
                                                 }
@@ -441,7 +450,7 @@ function Step1({ expanded, toggle, deckProps }: any) {
                                                         : 'hover:bg-blue-100'
                                                 }`}
                                             >
-                                                {sugg}
+                                                {sugg.name}
                                             </li>
                                         ))}
                                     </ul>
@@ -505,7 +514,7 @@ function Step2({ expanded, toggle, handProps }: any) {
         addHand,
         deck,
     } = handProps
-    const selectableDeck = deck.filter((d: DeckLine) => d.name !== 'Blank Card')
+    const selectableDeck = deck.filter((d: DeckLine) => d.card !== null)
 
     return (
         <Panel
@@ -524,14 +533,13 @@ function Step2({ expanded, toggle, handProps }: any) {
                     No ideal hands defined yet.
                 </div>
             )}
-
             <div className="space-y-2">
-                {hands.map((hand: string[], i: number) => (
+                {hands.map((hand: Card[], i: number) => (
                     <div
                         key={i}
                         className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 flex justify-between"
                     >
-                        <span>{hand.join(', ')}</span>
+                        <span>{hand.map((c) => c.name).join(', ')}</span>
                         <button
                             onClick={() =>
                                 setHands(
@@ -569,14 +577,15 @@ function Step2({ expanded, toggle, handProps }: any) {
                                         key={idx}
                                         className="inline-flex items-center mr-1"
                                     >
-                                        {card}
+                                        {card.name}
                                         <button
                                             type="button"
-                                            onClick={() => {
-                                                const copy = [...newHand]
-                                                copy.splice(idx, 1)
-                                                setNewHand(copy)
-                                            }}
+                                            onClick={() =>
+                                                setNewHand([
+                                                    ...newHand.slice(0, idx),
+                                                    ...newHand.slice(idx + 1),
+                                                ])
+                                            }
                                             className="ml-1 text-red-500 "
                                         >
                                             ×
@@ -587,19 +596,19 @@ function Step2({ expanded, toggle, handProps }: any) {
                         )}
 
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-80 overflow-y-auto">
-                            {selectableDeck.map((d: DeckLine) => (
+                            {selectableDeck.map((d: { card: Card }) => (
                                 <button
-                                    key={d.name + Math.random()}
+                                    key={d.card.id}
                                     type="button"
                                     onClick={() =>
-                                        setNewHand([...newHand, d.name])
+                                        setNewHand([...newHand, d.card])
                                     }
-                                    className="px-3 py-2 rounded-lg border  border-gray-200 hover:bg-gray-50"
+                                    className="px-3 py-2 rounded-lg border border-gray-200 hover:bg-gray-50"
                                 >
-                                    {d.name} (
+                                    {d.card.name} (
                                     {
                                         newHand.filter(
-                                            (c: Card) => c === d.name,
+                                            (c: Card) => c === d.card,
                                         ).length
                                     }
                                     )
@@ -631,7 +640,6 @@ function Step2({ expanded, toggle, handProps }: any) {
 
 function Step3({ expanded, toggle, analysisProps }: any) {
     const { hands, job, loading, loadingMessage, runAnalysis } = analysisProps
-
     const p5 = job?.result?.value ? parseFloat(job.result.value) : null
     const p6 = job?.result?.value_6 ? parseFloat(job.result.value_6) : null
 
@@ -675,7 +683,6 @@ function Step3({ expanded, toggle, analysisProps }: any) {
                                 {(p5 * 100).toFixed(2)}%
                             </div>
                         </div>
-
                         <div className="flex-1 p-4 border rounded-lg bg-white shadow text-center">
                             <div className="text-gray-500 mb-1">
                                 6-card hand

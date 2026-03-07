@@ -18,7 +18,6 @@ export function useCardDatabase() {
     useEffect(() => {
         fetch('/database-latest.json', { cache: 'no-store' })
             .then((resp) => {
-                console.log('Read manifest', resp)
                 return resp.ok ? (resp.json() as Promise<Manifest>) : null
             })
             .then((manifest) =>
@@ -26,7 +25,6 @@ export function useCardDatabase() {
                     ? fetch(`/data/${manifest.file}`, {
                           cache: 'no-store',
                       }).then((resp) => {
-                          console.log('read data', resp)
                           return resp.ok ? resp.json() : []
                       })
                     : [],
@@ -35,7 +33,6 @@ export function useCardDatabase() {
                 const parsed = Array.isArray(rawData)
                     ? CardArraySchema.safeParse(rawData)
                     : null
-                console.log('setting parsed data', parsed)
                 setCards(parsed?.success ? parsed.data : [])
             })
             .catch(() => setCards([]))
