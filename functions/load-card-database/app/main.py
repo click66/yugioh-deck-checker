@@ -1,11 +1,16 @@
 import hashlib
 import json
+import logging
 import urllib.request
 import os
+from urllib.error import HTTPError, URLError
 
 import boto3
 from datetime import datetime
 from app.transform import process_cards
+
+logger = logging.getLogger()
+logger.setLevel("INFO")
 
 SOURCE_URL = "https://db.ygoprodeck.com/api/v7/cardinfo.php"
 
@@ -19,8 +24,30 @@ s3 = boto3.client("s3")
 
 
 def fetch_cards_from_api():
-    with urllib.request.urlopen(SOURCE_URL) as response:
-        return json.loads(response.read())
+    headers = {
+        "User-Agent": "ygoprodeck-database-sync-lambda/1.0",
+        "Accept": "application/json"
+    }
+
+    req = urllib.request.Request(SOURCE_URL, headers=headers)
+
+    try:
+        with urllib.request.urlopen(req) as response:
+            return json.loads(response.read())
+
+    except HTTPError as e:
+        try:
+            body = e.read().decode("utf-8")
+        except Exception:
+            body = "<unable to read response body>"
+
+        logger.info(f"HTTPError {e.code} {e.reason}")
+        logger.info(body)
+        raise
+
+    except URLError as e:
+        logger.info(f"URLError: {e.reason}")
+        raise
 
 
 def upload_to_s3(bucket, key, data, extra_args=None):

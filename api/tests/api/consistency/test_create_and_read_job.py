@@ -40,7 +40,6 @@ def test_create_consistency_job_and_read_status():
     response = requests.get(f"{BASE_URL}/consistency/jobs/{data['jobId']}")
 
     # Then a 200 response is returned with a valid status
-    print(response.content)
     assert response.status_code == 200, "Request failed"
     data = response.json()
     assert "status" in data, "Response missing status"
