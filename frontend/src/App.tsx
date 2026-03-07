@@ -489,9 +489,7 @@ function Step2({ expanded, toggle, handProps }: any) {
 // ---------------- Step 3 ----------------
 function Step3({ expanded, toggle, analysisProps }: any) {
     const { hands, job, loading, loadingMessage, runAnalysis } = analysisProps
-    console.log(job)
 
-    // Extract both probabilities from job.result
     const p5 = job?.result?.value ? parseFloat(job.result.value) : null
     const p6 = job?.result?.value_6 ? parseFloat(job.result.value_6) : null
 
@@ -521,21 +519,31 @@ function Step3({ expanded, toggle, analysisProps }: any) {
             )}
 
             {p5 !== null && p6 !== null && (
-                <div className="mt-4 flex flex-col sm:flex-row gap-4">
-                    <div className="flex-1 p-4 border rounded-lg bg-white shadow text-center">
-                        <div className="text-gray-500 mb-1">5-card hand</div>
-                        <div className="text-2xl font-bold text-purple-600">
-                            {(p5 * 100).toFixed(2)}%
+                <>
+                    <p className="text-center">
+                        Analysis complete; the probabilities of opening one of
+                        your ideal hands are:
+                    </p>
+                    <div className="mt-4 flex flex-col sm:flex-row gap-4">
+                        <div className="flex-1 p-4 border rounded-lg bg-white shadow text-center">
+                            <div className="text-gray-500 mb-1">
+                                5-card hand
+                            </div>
+                            <div className="text-2xl font-bold text-purple-600">
+                                {(p5 * 100).toFixed(2)}%
+                            </div>
                         </div>
-                    </div>
 
-                    <div className="flex-1 p-4 border rounded-lg bg-white shadow text-center">
-                        <div className="text-gray-500 mb-1">6-card hand</div>
-                        <div className="text-2xl font-bold text-purple-600">
-                            {(p6 * 100).toFixed(2)}%
+                        <div className="flex-1 p-4 border rounded-lg bg-white shadow text-center">
+                            <div className="text-gray-500 mb-1">
+                                6-card hand
+                            </div>
+                            <div className="text-2xl font-bold text-purple-600">
+                                {(p6 * 100).toFixed(2)}%
+                            </div>
                         </div>
                     </div>
-                </div>
+                </>
             )}
         </Panel>
     )
