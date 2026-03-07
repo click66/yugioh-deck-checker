@@ -1,9 +1,17 @@
 import axios from 'axios'
 import { z } from 'zod'
 
+export const JobStatus = {
+    PENDING: 'pending',
+    RUNNING: 'running',
+    COMPLETED: 'completed',
+} as const
+
+export type JobStatusType = (typeof JobStatus)[keyof typeof JobStatus]
+
 export const ConsistencyJobSchema = z.object({
     jobId: z.string(),
-    status: z.string(),
+    status: z.enum([JobStatus.PENDING, JobStatus.RUNNING, JobStatus.COMPLETED]),
     result: z.object({}).optional().nullable(),
 })
 

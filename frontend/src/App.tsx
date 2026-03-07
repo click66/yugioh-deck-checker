@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { createJob, getJob } from './services/consistency'
+import { createJob, getJob, JobStatus } from './services/consistency'
 import type { ConsistencyJobResponse } from './services/consistency'
 
 type DeckLine = { name: string; count: number | '' }
@@ -94,8 +94,11 @@ export default function App() {
             if (!jobResp.jobId) return
             const result = await getJob(jobResp.jobId)
             setJob(result)
-            if (result.status === 'done') setLoading(false)
-            else setTimeout(poll, 5000)
+            if (result.status === JobStatus.COMPLETED) {
+                setLoading(false)
+            } else {
+                setTimeout(poll, 5000)
+            }
         }
         poll()
     }
