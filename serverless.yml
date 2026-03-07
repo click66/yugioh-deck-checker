@@ -54,6 +54,8 @@ functions:
     timeout: 300
 
 custom:
+  card-database:
+    bucketName: "${self:service}-${opt:stage, 'prod'}-card-database"
   frontend:
     bucketName: "${self:service}-${opt:stage, 'prod'}-frontend"
     cloudFrontDomain: yugioh.clarksirl.com
@@ -68,11 +70,22 @@ package:
 
 resources:
   Resources:
+    CardDatabaseBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: "${self:custom.card-database.bucketName}"
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: true
+          BlockPublicPolicy: true
+          IgnorePublicAcls: true
+          RestrictPublicBuckets: true
+
     CloudFrontOAI:
       Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
       Properties:
         CloudFrontOriginAccessIdentityConfig:
           Comment: "OAI for yugioh-deck-checker frontend"
+
     FrontendBucket:
       Type: AWS::S3::Bucket
       Properties:
@@ -82,9 +95,6 @@ resources:
           BlockPublicPolicy: true
           IgnorePublicAcls: true
           RestrictPublicBuckets: true
-        WebsiteConfiguration:
-          IndexDocument: index.html
-          ErrorDocument: index.html
 
     JobsTable:
       Type: AWS::DynamoDB::Table
