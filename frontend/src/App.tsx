@@ -3,6 +3,7 @@ import { createJob, getJob, JobStatus } from './services/consistency'
 import type { ConsistencyJobResponse } from './services/consistency'
 
 type DeckLine = { name: string; count: number | '' }
+type Card = string
 
 const loadingMessages = [
     'Shuffling the deck',
@@ -20,6 +21,9 @@ const loadingMessages = [
     'Performing quantum analysis',
 ]
 
+const DECK_STORAGE_KEY = 'deck'
+const HANDS_STORAGE_KEY = 'hands'
+
 export default function App() {
     const [expandedSteps, setExpandedSteps] = useState<{
         [key: number]: boolean
@@ -29,10 +33,17 @@ export default function App() {
         3: false,
     })
 
-    const [deckSize, setDeckSize] = useState(40)
     const defaultDeckLine = { name: 'Branded Fusion', count: 1 }
-    const [deck, setDeck] = useState<DeckLine[]>([defaultDeckLine])
-    const [hands, setHands] = useState<string[][]>([])
+    const [deck, setDeck] = useState<DeckLine[]>(() => {
+        const saved = localStorage.getItem(DECK_STORAGE_KEY)
+        return saved ? JSON.parse(saved) : [defaultDeckLine]
+    })
+    const [hands, setHands] = useState<string[][]>(() => {
+        const saved = localStorage.getItem(HANDS_STORAGE_KEY)
+        return saved ? JSON.parse(saved) : []
+    })
+
+    const [deckSize, setDeckSize] = useState(40)
     const [showHandModal, setShowHandModal] = useState(false)
     const [newHand, setNewHand] = useState<string[]>([])
     const [job, setJob] = useState<ConsistencyJobResponse | null>(null)
@@ -41,9 +52,17 @@ export default function App() {
         loadingMessages[Math.floor(Math.random() * loadingMessages.length)],
     )
 
+    // Persist deck & hands whenever they change
+    useEffect(() => {
+        localStorage.setItem(DECK_STORAGE_KEY, JSON.stringify(deck))
+    }, [deck])
+
+    useEffect(() => {
+        localStorage.setItem(HANDS_STORAGE_KEY, JSON.stringify(hands))
+    }, [hands])
+
     useEffect(() => {
         if (!loading) return
-
         const interval = setInterval(() => {
             setLoadingMessage(
                 loadingMessages[
@@ -51,7 +70,6 @@ export default function App() {
                 ],
             )
         }, 5000)
-
         return () => clearInterval(interval)
     }, [loading])
 
@@ -63,16 +81,16 @@ export default function App() {
     const parseDeck = () => {
         const cleaned = deck
             .filter((d) => d.name.trim() !== '')
-            .map((d) => ({ name: d.name, count: Number(d.count) || 0 }))
-
-        const validCardNames = new Set(cleaned.map((d) => d.name))
-
-        const filteredHands = hands.filter((hand) =>
-            hand.every((card) => validCardNames.has(card)),
-        )
-
+            .map((d) => ({
+                name: d.name,
+                count: Number(d.count) || 0,
+            }))
         setDeck(cleaned)
-        setHands(filteredHands)
+        setHands((prev) =>
+            prev
+                .map((h) => h.filter((c) => cleaned.some((d) => d.name === c)))
+                .filter((h) => h.length > 0),
+        )
         setJob(null)
         setExpandedSteps({ 1: false, 2: true, 3: false })
     }
@@ -86,10 +104,14 @@ export default function App() {
         }
     }
 
+    const clearDeck = () => {
+        setDeck([])
+    }
+
     const runAnalysis = async () => {
         if (deck.length === 0 || hands.length === 0) return
         setLoading(true)
-        setExpandedSteps({ 1: false, 2: false, 3: true })
+        setExpandedSteps((prev) => ({ ...prev, 2: false }))
 
         const names = deck.map((d) => d.name)
         const ratios = deck.map((d) => Number(d.count) || 0)
@@ -118,7 +140,14 @@ export default function App() {
         poll()
     }
 
-    const deckProps = { deck, setDeck, deckSize, setDeckSize, parseDeck }
+    const deckProps = {
+        deck,
+        setDeck,
+        deckSize,
+        setDeckSize,
+        parseDeck,
+        clearDeck,
+    }
     const handProps = {
         hands,
         setHands,
@@ -138,7 +167,6 @@ export default function App() {
                     <h1 className="text-3xl font-semibold text-center text-gray-800">
                         Yu-Gi-Oh Deck Consistency Analysis
                     </h1>
-
                     <p className="px-2">
                         A tool for estimating a deck's consistency at drawing
                         specific hands.
@@ -204,7 +232,7 @@ function Panel({ title, expanded, toggle, children }: any) {
     return (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200">
             <div
-                className="px-5 py-3 border-b border-gray-200 font-medium text-lg cursor-pointer flex justify-between"
+                className="px-5 py-3 border-b border-gray-200 font-medium text-lg  flex justify-between"
                 onClick={toggle}
             >
                 {title}
@@ -217,7 +245,8 @@ function Panel({ title, expanded, toggle, children }: any) {
 
 // ---------------- Step 1 ----------------
 function Step1({ expanded, toggle, deckProps }: any) {
-    const { deck, setDeck, deckSize, setDeckSize, parseDeck } = deckProps
+    const { deck, setDeck, deckSize, setDeckSize, parseDeck, clearDeck } =
+        deckProps
 
     const updateRow = (
         index: number,
@@ -289,7 +318,7 @@ function Step1({ expanded, toggle, deckProps }: any) {
                         />
                         <button
                             onClick={() => removeRow(i)}
-                            className="px-2 py-1 text-sm bg-red-400 text-white rounded cursor-pointer"
+                            className="px-2 py-1 text-sm bg-red-400 text-white rounded "
                         >
                             Remove
                         </button>
@@ -299,21 +328,21 @@ function Step1({ expanded, toggle, deckProps }: any) {
                 <div className="flex gap-3 pt-3">
                     <button
                         onClick={addRow}
-                        className="px-4 py-2 bg-gray-200 rounded cursor-pointer"
+                        className="px-4 py-2 bg-gray-200 rounded "
                     >
                         Add Card
                     </button>
                     <button
-                        onClick={() => setDeck([])}
-                        className="px-4 py-2 bg-red-400 text-white rounded cursor-pointer"
-                    >
-                        Clear Deck
-                    </button>
-                    <button
                         onClick={parseDeck}
-                        className="px-5 py-2 bg-blue-500 text-white rounded cursor-pointer"
+                        className="px-5 py-2 bg-blue-500 text-white rounded "
                     >
                         Next
+                    </button>
+                    <button
+                        onClick={clearDeck}
+                        className="px-4 py-2 bg-red-500 text-white rounded "
+                    >
+                        Clear Deck
                     </button>
                 </div>
             </div>
@@ -343,7 +372,7 @@ function Step2({ expanded, toggle, handProps }: any) {
         >
             <button
                 onClick={() => setShowHandModal(true)}
-                className="mb-4 px-4 py-2 bg-green-500 text-white rounded cursor-pointer"
+                className="mb-4 px-4 py-2 bg-green-500 text-white rounded "
             >
                 Add Ideal Hand
             </button>
@@ -368,7 +397,7 @@ function Step2({ expanded, toggle, handProps }: any) {
                                     ),
                                 )
                             }
-                            className="text-red-400 text-sm cursor-pointer"
+                            className="text-red-400 text-sm "
                         >
                             remove
                         </button>
@@ -391,51 +420,61 @@ function Step2({ expanded, toggle, handProps }: any) {
 
                         {newHand.length > 0 && (
                             <div className="mb-3 text-sm text-gray-700">
-                                Selected: {newHand.join(', ')}
+                                Selected:{' '}
+                                {newHand.map((card: Card, idx: number) => (
+                                    <span
+                                        key={idx}
+                                        className="inline-flex items-center mr-1"
+                                    >
+                                        {card}
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const copy = [...newHand]
+                                                copy.splice(idx, 1)
+                                                setNewHand(copy)
+                                            }}
+                                            className="ml-1 text-red-500 "
+                                        >
+                                            ×
+                                        </button>
+                                    </span>
+                                ))}
                             </div>
                         )}
+
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-80 overflow-y-auto">
-                            {selectableDeck.map((d: any) => {
-                                const selected = newHand.includes(d.name)
-                                return (
-                                    <button
-                                        key={d.name}
-                                        type="button"
-                                        onClick={() => {
-                                            if (selected) {
-                                                setNewHand(
-                                                    newHand.filter(
-                                                        (n: string) =>
-                                                            n !== d.name,
-                                                    ),
-                                                )
-                                            } else {
-                                                setNewHand([...newHand, d.name])
-                                            }
-                                        }}
-                                        className={`px-3 py-2 rounded-lg border cursor-pointer ${
-                                            selected
-                                                ? 'bg-blue-500 text-white border-blue-500'
-                                                : 'border-gray-200 hover:bg-gray-50'
-                                        }`}
-                                    >
-                                        {d.name}
-                                    </button>
-                                )
-                            })}
+                            {selectableDeck.map((d: DeckLine) => (
+                                <button
+                                    key={d.name + Math.random()}
+                                    type="button"
+                                    onClick={() =>
+                                        setNewHand([...newHand, d.name])
+                                    }
+                                    className="px-3 py-2 rounded-lg border  border-gray-200 hover:bg-gray-50"
+                                >
+                                    {d.name} (
+                                    {
+                                        newHand.filter(
+                                            (c: Card) => c === d.name,
+                                        ).length
+                                    }
+                                    )
+                                </button>
+                            ))}
                         </div>
 
                         <div className="flex justify-end gap-3 mt-5">
                             <button
                                 onClick={() => setShowHandModal(false)}
-                                className="px-4 py-2 bg-gray-200 rounded cursor-pointer"
+                                className="px-4 py-2 bg-gray-200 rounded "
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={addHand}
                                 disabled={newHand.length === 0}
-                                className="px-4 py-2 bg-blue-500 text-white rounded cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="px-4 py-2 bg-blue-500 text-white rounded  disabled:opacity-50"
                             >
                                 Save
                             </button>
@@ -461,7 +500,7 @@ function Step3({ expanded, toggle, analysisProps }: any) {
                 <button
                     onClick={runAnalysis}
                     disabled={hands.length === 0}
-                    className="px-5 py-2 bg-purple-500 text-white rounded cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-5 py-2 bg-purple-500 text-white rounded disabled:opacity-50 "
                 >
                     Run Analysis
                 </button>
