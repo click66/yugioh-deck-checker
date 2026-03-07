@@ -66,7 +66,7 @@ functions:
       ENV_PREFIX: "${self:service}-${opt:stage, self:provider.stage, 'prod'}"
     events:
       - schedule:
-          name: "daily-load-card-database"
+          name: "${self:service}-${opt:stage, self:provider.stage, 'prod'}-daily-load-card-database"
           description: "Runs load-card-database Lambda every midnight UTC"
           rate: cron(0 0 * * ? *)
           enabled: true
