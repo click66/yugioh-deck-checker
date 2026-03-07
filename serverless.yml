@@ -79,6 +79,14 @@ resources:
           BlockPublicPolicy: false
           IgnorePublicAcls: false
           RestrictPublicBuckets: false
+        CorsConfiguration:
+          CorsRules:
+            - AllowedMethods:
+                - GET
+              AllowedOrigins:
+                - https://your-frontend-domain.com
+              AllowedHeaders:
+                - "*"
 
     CloudFrontOAI:
       Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
