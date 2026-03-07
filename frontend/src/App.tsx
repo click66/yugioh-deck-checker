@@ -238,7 +238,7 @@ export default function App() {
 
 function Panel({ title, expanded, toggle, children }: any) {
     return (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 text-sm">
             <div
                 className="px-5 py-3 border-b border-gray-200 font-medium text-lg flex justify-between"
                 onClick={toggle}
