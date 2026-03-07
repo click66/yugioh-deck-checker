@@ -15,6 +15,7 @@ def test_consistency_basic():
         deckcount, ratios, names, ideal_hands, num_hands=1)
 
     # Then the result should be either 0 or 1
+    result = result.p5
     assert result in (0, 1)
 
 
@@ -30,6 +31,7 @@ def test_consistency_with_blanks_added():
         deckcount, ratios, names, ideal_hands, num_hands=10)
 
     # Then the result should always be between 0 and 1
+    result = result.p5
     assert 0 <= result <= 1
 
 
@@ -58,6 +60,7 @@ def test_consistency_full_deck_matches_all_hands():
         deckcount, ratios, names, ideal_hands, num_hands=10)
 
     # Then every hand should match (result == 1.0)
+    result = result.p5
     assert result == 1.0
 
 
@@ -73,6 +76,7 @@ def test_consistency_hand_never_matches():
         deckcount, ratios, names, ideal_hands, num_hands=10)
 
     # Then no hand should match (result == 0.0)
+    result = result.p5
     assert result == 0.0
 
 

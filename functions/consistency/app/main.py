@@ -24,7 +24,6 @@ def _serialize_result(result):
     elif result is None:
         return {"NULL": True}
     else:
-        # fallback to string representation
         return {"S": str(result)}
 
 
@@ -34,7 +33,7 @@ def lambda_handler(event, context):
     names = event["names"]
     ratios = event["ratios"]
     ideal_hands = event["ideal_hands"]
-    num_hands = event.get("num_hands", 100_000)
+    num_hands = 1_000_000   # fixed for now
 
     try:
         result = simple_consistency(
@@ -50,17 +49,22 @@ def lambda_handler(event, context):
         result = None
         status = "failed"
 
-    if result is not None and not isinstance(result, dict):
-        result = {"value": result}
-
-    update_expression = "SET #s = :status"
     expression_attr_names = {"#s": "status"}
     expression_attr_values = {":status": {"S": status}}
+    update_expression = "SET #s = :status"
 
     if result is not None:
+        result_dict = {k: getattr(result, k)
+                       for k in result.__dataclass_fields__}
+
+        combined_result = {
+            "value": str(result_dict["p5"]),
+            "value_6": str(result_dict["p6"]),
+        }
+
         update_expression += ", #r = :result"
         expression_attr_names["#r"] = "result"
-        expression_attr_values[":result"] = _serialize_result(result)
+        expression_attr_values[":result"] = _serialize_result(combined_result)
 
     dynamodb.update_item(
         TableName=TABLE_NAME,

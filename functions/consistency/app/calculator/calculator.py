@@ -3,6 +3,7 @@ from collections import Counter
 from typing import List, Sequence
 
 from app.calculator.exceptions import InvalidCardCountsError
+from app.calculator.result import ConsistencyResult
 
 
 def hand_is_good(hand: Sequence[str], ideal_hands: Sequence[Sequence[str]]) -> bool:
@@ -20,8 +21,8 @@ def simple_consistency(
     ratios: Sequence[int],
     names: Sequence[str],
     ideal_hands: Sequence[Sequence[str]],
-    num_hands: int = 100_000,
-) -> float:
+    num_hands: int = 1_000_000,
+) -> ConsistencyResult:
     """Estimate probability that a random 5-card hand matches an ideal hand."""
 
     # Make local copies to avoid mutating inputs
@@ -37,13 +38,24 @@ def simple_consistency(
         names.append('blank')
 
     # Build deck list
-    deck: List[str] = [card for name, count in zip(
-        names, ratios) for card in [name] * count]
+    deck: List[str] = [
+        card for name, count in zip(names, ratios) for card in [name] * count
+    ]
 
     # Simulate hands
-    good_count = sum(
-        1 for _ in range(num_hands)
-        if hand_is_good(random.sample(deck, 5), ideal_hands)
-    )
+    good_5 = 0
+    good_6 = 0
 
-    return good_count / num_hands
+    for _ in range(num_hands):
+        shuffled = deck.copy()
+        random.shuffle(shuffled)
+
+        hand5 = shuffled[:5]
+        if hand_is_good(hand5, ideal_hands):
+            good_5 += 1
+
+        hand6 = shuffled[:6]
+        if hand_is_good(hand6, ideal_hands):
+            good_6 += 1
+
+    return ConsistencyResult(good_5 / num_hands, good_6 / num_hands)

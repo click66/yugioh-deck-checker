@@ -53,8 +53,39 @@ functions:
       ENV_PREFIX: "${self:service}-${opt:stage, self:provider.stage, 'prod'}"
     timeout: 300
 
+custom:
+  frontend:
+    bucketName: "${self:service}-${opt:stage, 'prod'}-frontend"
+    cloudFrontDomain: yugioh.clarksirl.com
+    distributionFolder: ./frontend/dist
+  s3Deploy:
+    - bucket: "${self:custom.frontend.bucketName}"
+      folder: "${self:custom.frontend.distributionFolder}"
+      cacheControl: "max-age=31536000"
+
+package:
+  individually: true
+
 resources:
   Resources:
+    CloudFrontOAI:
+      Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+      Properties:
+        CloudFrontOriginAccessIdentityConfig:
+          Comment: "OAI for yugioh-deck-checker frontend"
+    FrontendBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: "${self:custom.frontend.bucketName}"
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: true
+          BlockPublicPolicy: true
+          IgnorePublicAcls: true
+          RestrictPublicBuckets: true
+        WebsiteConfiguration:
+          IndexDocument: index.html
+          ErrorDocument: index.html
+
     JobsTable:
       Type: AWS::DynamoDB::Table
       Properties:
@@ -66,3 +97,13 @@ resources:
           - AttributeName: job_id
             KeyType: HASH
         BillingMode: PAY_PER_REQUEST
+
+  Outputs:
+    FrontendBucketName:
+      Value: !Ref FrontendBucket
+      Export:
+        Name: FrontendBucketName
+    ApiEndpoint:
+      Value: !Sub "https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${opt:stage, self:provider.stage, 'prod'}"
+      Export:
+        Name: ApiEndpoint

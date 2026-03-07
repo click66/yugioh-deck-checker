@@ -32,6 +32,36 @@ jobs:
         run: npm install -g serverless
 
       - name: Deploy to production
-        run: serverless deploy --stage prod
+        run: |
+          serverless deploy --stage prod
+          serverless info --verbose --stage prod
         env:
           SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
+
+      - name: Get CloudFormation outputs
+        id: stack_outputs
+        run: |
+          OUTPUTS=$(aws cloudformation describe-stacks \
+            --stack-name yugioh-deck-checker-prod \
+            --query "Stacks[0].Outputs" \
+            --output json)
+          echo "$OUTPUTS" > outputs.json
+          echo "FRONTEND_BUCKET=$(jq -r '.[] | select(.OutputKey=="FrontendBucketName") | .OutputValue' outputs.json)" >> $GITHUB_ENV
+          echo "API_URL=$(jq -r '.[] | select(.OutputKey=="HttpApiUrl") | .OutputValue' outputs.json)" >> $GITHUB_ENV
+          echo "CLOUDFRONT_ID=$(jq -r '.[] | select(.OutputKey=="CloudFrontDistributionId") | .OutputValue' outputs.json)" >> $GITHUB_ENV
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm ci
+          VITE_API_URL=${API_URL} npm run build
+
+      - name: Deploy frontend to S3
+        run: |
+          aws s3 sync ./frontend/dist s3://${FRONTEND_BUCKET} --delete --cache-control max-age=31536000
+
+      - name: Invalidate CloudFront cache
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id E1WR0ZKN4NI12D \
+            --paths "/*"
