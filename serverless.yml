@@ -75,10 +75,10 @@ resources:
       Properties:
         BucketName: "${self:custom.card-database.bucketName}"
         PublicAccessBlockConfiguration:
-          BlockPublicAcls: true
-          BlockPublicPolicy: true
-          IgnorePublicAcls: true
-          RestrictPublicBuckets: true
+          BlockPublicAcls: false
+          BlockPublicPolicy: false
+          IgnorePublicAcls: false
+          RestrictPublicBuckets: false
 
     CloudFrontOAI:
       Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
