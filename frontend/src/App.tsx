@@ -5,12 +5,19 @@ import type { ConsistencyJobResponse } from './services/consistency'
 type DeckLine = { name: string; count: number | '' }
 
 const loadingMessages = [
-    'Shuffling the deck...',
-    'Drawing opening hands...',
-    'Consulting the heart of the cards...',
-    'Simulating thousands of duels...',
-    'Checking combo consistency...',
-    'Calculating probabilities...',
+    'Shuffling the deck',
+    'Drawing opening hands',
+    'Consulting the heart of the cards',
+    'Simulating thousands of duels',
+    'Checking combo consistency',
+    'Calculating probabilities',
+    'Recreating perfectly quaffed hair',
+    'Running probability scenarios',
+    "Stacking the deck myself so there's no one else to blame",
+    'Postulating a winning strategem',
+    'Initiating duel simulation',
+    'Calculating player strength',
+    'Performing quantum analysis',
 ]
 
 export default function App() {
@@ -103,7 +110,6 @@ export default function App() {
         poll()
     }
 
-    // Grouped prop objects
     const deckProps = { deck, setDeck, deckSize, setDeckSize, parseDeck }
     const handProps = {
         hands,
@@ -186,7 +192,6 @@ export default function App() {
     )
 }
 
-// Generic panel wrapper
 function Panel({ title, expanded, toggle, children }: any) {
     return (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200">
@@ -245,7 +250,6 @@ function Step1({ expanded, toggle, deckProps }: any) {
             </div>
 
             <div className="space-y-3">
-                {/* Blank Card placeholder on top */}
                 <div className="flex gap-3 items-center bg-gray-100 border border-dashed border-gray-300 rounded-lg px-3 py-2 text-gray-500">
                     <div className="w-16 text-center">{blankCount}</div>
                     <div className="flex-1 italic">Blank Card</div>
@@ -455,9 +459,19 @@ function Step3({ expanded, toggle, analysisProps }: any) {
 
             {job?.result && (
                 <div className="mt-4 bg-gray-50 border border-gray-200 rounded-lg p-4">
-                    <pre className="text-sm text-gray-600 whitespace-pre-wrap">
-                        {JSON.stringify(job.result, null, 2)}
-                    </pre>
+                    {job?.result?.value && (
+                        <div className="mt-4 bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
+                            <div className="text-gray-600 text-sm mb-2">
+                                Probability of opening an ideal hand:
+                            </div>
+                            <div className="text-2xl font-semibold text-purple-600">
+                                {(parseFloat(job.result.value) * 100).toFixed(
+                                    2,
+                                )}
+                                %
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
         </Panel>

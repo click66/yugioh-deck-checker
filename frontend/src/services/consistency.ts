@@ -12,7 +12,12 @@ export type JobStatusType = (typeof JobStatus)[keyof typeof JobStatus]
 export const ConsistencyJobSchema = z.object({
     jobId: z.string(),
     status: z.enum([JobStatus.PENDING, JobStatus.RUNNING, JobStatus.COMPLETED]),
-    result: z.object({}).optional().nullable(),
+    result: z
+        .object({
+            value: z.string(),
+        })
+        .optional()
+        .nullable(),
 })
 
 export type ConsistencyJobResponse = z.infer<typeof ConsistencyJobSchema>
