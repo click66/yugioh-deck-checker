@@ -71,28 +71,28 @@ def hand_is_wild(
                 type_name = card[4:]
 
                 # Count cards of this type in hand (excluding exact matches already subtracted)
-                # type_count = sum(
-                #     1
-                #     for c in hand
-                #     if card_database.get(int(c), {}).get("superType") == type_name
-                # )
+                type_count = sum(
+                    1
+                    for c in hand
+                    if card_database.get(int(c), {}).get("superType") == type_name
+                )
 
                         # Count cards of this type in hand (excluding exact matches already subtracted)
-                type_count = 0
-                for c in hand:
-                    card_data = card_database.get(int(c))
-                    frame_type = card_data.get("superType") if card_data else None
+                # type_count = 0
+                # for c in hand:
+                #     card_data = card_database.get(int(c))
+                #     frame_type = card_data.get("superType") if card_data else None
 
-                    # Log the card in hand and its data
-                    logger.info(
-                        "Checking card %s in hand %s, data: %s",
-                        c,
-                        hand,
-                        card_data if card_data else "Unresolved"
-                    )
+                #     # Log the card in hand and its data
+                #     logger.info(
+                #         "Checking card %s in hand %s, data: %s",
+                #         c,
+                #         hand,
+                #         card_data if card_data else "Unresolved"
+                #     )
 
-                    if frame_type == type_name:
-                        type_count += 1
+                #     if frame_type == type_name:
+                #         type_count += 1
 
                 # subtract exact cards
                 type_count += remaining_types.get(type_name, 0)
