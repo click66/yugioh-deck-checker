@@ -1,18 +1,30 @@
 import random
 from collections import Counter
-from typing import List, Sequence
+from typing import List, Sequence, Union
 
 from app.calculator.exceptions import InvalidCardCountsError
 from app.calculator.result import ConsistencyResult
 
 
-def hand_is_good(hand: Sequence[str], ideal_hands: Sequence[Sequence[str]]) -> bool:
-    """Return True if the hand matches any of the ideal hands."""
-    hand_counts = Counter(hand)
-    return any(
-        all(hand_counts[card] >= count for card,
-            count in Counter(pattern).items())
+def hand_is_good(
+    hand: Sequence[str],
+    ideal_hands: Sequence[Union[Sequence[str], Counter]]
+) -> bool:
+    """
+    Return True if the hand matches any of the ideal hands.
+    Accepts ideal_hands as list of lists (for tests) or list of Counters (optimized).
+    """
+    hand_counter = Counter(hand)
+
+    # Convert ideal_hands to counters if not already
+    ideal_counters = [
+        pattern if isinstance(pattern, Counter) else Counter(pattern)
         for pattern in ideal_hands
+    ]
+
+    return any(
+        all(hand_counter[card] >= count for card, count in pattern.items())
+        for pattern in ideal_counters
     )
 
 
@@ -23,39 +35,46 @@ def simple_consistency(
     ideal_hands: Sequence[Sequence[str]],
     num_hands: int = 1_000_000,
 ) -> ConsistencyResult:
-    """Estimate probability that a random 5-card hand matches an ideal hand."""
+    """Estimate probability that a random 5-card (and 6-card) hand matches an ideal hand."""
 
-    # Make local copies to avoid mutating inputs
-    ratios = list(ratios)
-    names = list(names)
+    # Make local copies to avoid mutation of originals
+    ratios = ratios.copy()
+    names = names.copy()
 
-    # Fill deck with 'blank' cards if needed
+    # Validate size & fill deck to deck count with blanks
     blanks = deckcount - sum(ratios)
     if blanks < 0:
         raise InvalidCardCountsError("Ratios add up to more than Deck Count")
     if blanks > 0:
         ratios.append(blanks)
-        names.append('blank')
+        names.append("blank")
 
-    # Build deck list
+    # Build deck
     deck: List[str] = [
         card for name, count in zip(names, ratios) for card in [name] * count
     ]
 
-    # Simulate hands
+    # Precompute ideal hand counters for efficiency
+    ideal_counters: List[Counter] = [
+        Counter(pattern) for pattern in ideal_hands
+    ]
+
     good_5 = 0
     good_6 = 0
 
     for _ in range(num_hands):
-        shuffled = deck.copy()
-        random.shuffle(shuffled)
-
-        hand5 = shuffled[:5]
-        if hand_is_good(hand5, ideal_hands):
+        # Draw 5-card hand
+        hand5 = random.sample(deck, 5)
+        if hand_is_good(hand5, ideal_counters):
             good_5 += 1
 
-        hand6 = shuffled[:6]
-        if hand_is_good(hand6, ideal_hands):
-            good_6 += 1
+        # Draw 6-card hand only if deck >= 6
+        if len(deck) >= 6:
+            hand6 = random.sample(deck, 6)
+            if hand_is_good(hand6, ideal_counters):
+                good_6 += 1
 
-    return ConsistencyResult(good_5 / num_hands, good_6 / num_hands)
+    p5 = good_5 / num_hands
+    p6 = good_6 / num_hands if len(deck) >= 6 else 0.0
+
+    return ConsistencyResult(p5, p6)
