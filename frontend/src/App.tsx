@@ -63,6 +63,7 @@ export default function App() {
     const [loadingMessage, setLoadingMessage] = useState(
         loadingMessages[Math.floor(Math.random() * loadingMessages.length)],
     )
+    const [useWildcards, setUseWildcards] = useState(false)
 
     useEffect(() => {
         localStorage.setItem(DECK_STORAGE_KEY, JSON.stringify(deck))
@@ -158,6 +159,7 @@ export default function App() {
             ratios: validatedDeck.map((d) => Number(d.count) || 0),
             ideal_hands: hands.map((hand) => hand.map((c) => `${c.id}`)),
             num_hands: hands.length,
+            use_wildcards: useWildcards,
         }
 
         const jobResp = await createJob(payload)
@@ -236,8 +238,32 @@ export default function App() {
                     <Step3
                         expanded={expandedSteps[3]}
                         toggle={() => toggleStep(3)}
-                        analysisProps={analysisProps}
-                    />
+                        analysisProps={{
+                            hands,
+                            job,
+                            loading,
+                            loadingMessage,
+                            runAnalysis,
+                        }}
+                    >
+                        <div className="flex items-center mt-4">
+                            <input
+                                type="checkbox"
+                                id="useWildcards"
+                                checked={useWildcards}
+                                onChange={(e) =>
+                                    setUseWildcards(e.target.checked)
+                                }
+                                className="mr-2"
+                            />
+                            <label
+                                htmlFor="useWildcards"
+                                className="text-sm text-gray-700"
+                            >
+                                Use wildcards (experimental feature)
+                            </label>
+                        </div>
+                    </Step3>
                 </div>
             </div>
             <footer className="w-full bg-gray-100 border-t border-gray-300 mt-10">
@@ -562,7 +588,7 @@ function Step2({ expanded, toggle, handProps }: any) {
     )
 }
 
-function Step3({ expanded, toggle, analysisProps }: any) {
+function Step3({ expanded, toggle, analysisProps, children }: any) {
     const { hands, job, loading, loadingMessage, runAnalysis } = analysisProps
     const p5 = job?.result?.value ? parseFloat(job.result.value) : null
     const p6 = job?.result?.value_6 ? parseFloat(job.result.value_6) : null
@@ -583,6 +609,8 @@ function Step3({ expanded, toggle, analysisProps }: any) {
                     Run Analysis
                 </button>
             )}
+
+            {children}
 
             {loading && (
                 <div className="flex flex-col items-center gap-4 py-6">

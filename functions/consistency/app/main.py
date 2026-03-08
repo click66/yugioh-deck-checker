@@ -1,7 +1,7 @@
 import os
 import boto3
 import logging
-from app.calculator.calculator import hand_is_good, simple_consistency
+from app.calculator.calculator import hand_is_good, hand_is_wild, simple_consistency
 
 logger = logging.getLogger()
 logger.setLevel("INFO")
@@ -9,12 +9,25 @@ logger.setLevel("INFO")
 TABLE_NAME = f"{os.environ.get('ENV_PREFIX', 'dev')}-jobs"
 dynamodb = boto3.client("dynamodb")
 
+# Minimal mock card database keyed by card ID
+card_database = {
+    80181649: {"frameType": "spell", "attribute": None, "race": None, "name": "A Case for K9"},
+    86988864: {"frameType": "effect", "attribute": None, "race": "Beast", "name": "3-Hump Lacooda"},
+    14261867: {"frameType": "effect", "attribute": "DARK", "race": "Insect", "name": "8-Claws Scorpion"},
+    23771716: {"frameType": "normal", "attribute": "WATER", "race": "Fish", "name": "7 Colored Fish"},
+    6850209: {"frameType": "spell", "attribute": "DARK", "race": "Quick-Play", "name": "A Deal with Dark Ruler"},
+    68170903: {"frameType": "trap", "attribute": None, "race": None, "name": "A Feint Plan"},
+}
+
+# Wildcard definitions for IDs
+wildcard_lookup = {
+    "any_spell": lambda card_id: card_database[card_id]["frameType"] == "spell",
+    "any_trap": lambda card_id: card_database[card_id]["frameType"] == "trap",
+    "any_dark": lambda card_id: card_database[card_id].get("attribute") == "DARK",
+}
+
 
 def _serialize_result(result):
-    """
-    Convert numeric or nested Python objects to DynamoDB-compatible format.
-    DynamoDB expects numbers as Decimal and dicts/lists recursively converted.
-    """
     if isinstance(result, (int, float)):
         return {"N": str(result)}
     elif isinstance(result, dict):
@@ -33,18 +46,28 @@ def lambda_handler(event, context):
     names = event["names"]
     ratios = event["ratios"]
     ideal_hands = event["ideal_hands"]
-    num_hands = 1_000_000   # fixed for now
+    num_hands = 1_000_000  # fixed for now
 
-    logger.info(f"Job {job_id} started.")
+    # Feature toggle: whether to use hand_is_wild
+    use_wildcards = event.get("use_wildcards", False)
+
+    logger.info(f"Job {job_id} started. use_wildcards={use_wildcards}")
 
     try:
+        if use_wildcards:
+            def hand_checker(hand, ideal_counters): return hand_is_wild(
+                hand, ideal_counters, card_database, wildcard_lookup
+            )
+        else:
+            hand_checker = hand_is_good
+
         result = simple_consistency(
             deckcount=deckcount,
             ratios=ratios,
             names=names,
             ideal_hands=ideal_hands,
             num_hands=num_hands,
-            hand_checker=hand_is_good,
+            hand_checker=hand_checker,
         )
         status = "completed"
     except Exception as e:
@@ -61,7 +84,6 @@ def lambda_handler(event, context):
     if result is not None:
         result_dict = {k: getattr(result, k)
                        for k in result.__dataclass_fields__}
-
         combined_result = {
             "value": str(result_dict["p5"]),
             "value_6": str(result_dict["p6"]),
