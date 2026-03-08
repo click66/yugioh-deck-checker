@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { createJob, getJob, JobStatus } from './services/consistency'
 import type { ConsistencyJobResponse } from './services/consistency'
 import { useCardDatabase } from './hooks/useCardDatabase'
+import { DeckRow } from './components/dca/deck-row'
+import { parseYdk } from './services/ydk-import'
 
 type Card = { id: number; name: string }
 type DeckLine = { card: Card | null; count: number | ''; input: string }
@@ -311,47 +313,27 @@ function Step1({ expanded, toggle, deckProps }: any) {
     )
     const blankCount = Math.max(deckSize - enteredTotal, 0)
 
-    const importYdkFile = (file: File) => {
+    function importYdkFile(file: File) {
         const reader = new FileReader()
+
         reader.onload = () => {
-            if (!reader.result) return
-
-            const lines = (reader.result as string)
-                .split(/\r?\n/)
-                .map((line) => line.trim())
-
-            let inMain = false
-            const mainIds: number[] = []
-
-            for (const line of lines) {
-                if (line.startsWith('#main')) {
-                    inMain = true
-                    continue
-                }
-                if (line.startsWith('#') || line.startsWith('!')) {
-                    if (line !== '#main') inMain = false
-                    continue
-                }
-                if (inMain && /^\d+$/.test(line)) {
-                    mainIds.push(Number(line))
-                }
+            if (!reader.result) {
+                return
             }
 
-            const countMap = new Map<number, number>()
-            mainIds.forEach((id) =>
-                countMap.set(id, (countMap.get(id) || 0) + 1),
-            )
+            const countMap = parseYdk(reader.result as string)
 
             const importedDeck: DeckLine[] = Array.from(countMap.entries())
                 .map(([id, count]) => {
                     const card = cardDatabase.find((c) => c.id === id)
-                    return card
-                        ? {
-                              card,
-                              count: count as number | '',
-                              input: card.name,
-                          }
-                        : undefined
+
+                    if (!card) return undefined
+
+                    return {
+                        card,
+                        input: card.name,
+                        count: count as number | '',
+                    }
                 })
                 .filter((c) => c !== undefined)
 
@@ -383,97 +365,24 @@ function Step1({ expanded, toggle, deckProps }: any) {
                     <div className="flex-1 italic">Blank Card</div>
                 </div>
 
-                {deck.map((row: DeckLine, i: number) => {
-                    const suggestions = activeSuggestions[i] || []
-                    const highlighted = highlightedIndex[i] ?? 0
-
-                    return (
-                        <div
-                            key={i}
-                            className="relative flex gap-3 items-center bg-gray-50 border border-gray-200 rounded-lg px-3 py-2"
-                        >
-                            <input
-                                type="number"
-                                min={1}
-                                max={3}
-                                value={row.count}
-                                onChange={(e) =>
-                                    updateRow(i, 'count', e.target.value)
-                                }
-                                className="w-16 border border-gray-200 rounded px-2 py-1"
-                            />
-                            <div className="flex-1 relative">
-                                <input
-                                    type="text"
-                                    value={row.input}
-                                    placeholder="Card name"
-                                    onChange={(e) =>
-                                        updateRow(i, 'input', e.target.value)
-                                    }
-                                    onKeyDown={(e) => {
-                                        if (!suggestions.length) {
-                                            return
-                                        }
-
-                                        let newIndex = highlighted
-
-                                        if (e.key === 'ArrowDown') {
-                                            newIndex =
-                                                (highlighted + 1) %
-                                                suggestions.length
-                                            e.preventDefault()
-                                        } else if (e.key === 'ArrowUp') {
-                                            newIndex =
-                                                (highlighted -
-                                                    1 +
-                                                    suggestions.length) %
-                                                suggestions.length
-                                            e.preventDefault()
-                                        } else if (e.key === 'Enter') {
-                                            selectSuggestion(
-                                                i,
-                                                suggestions[highlighted],
-                                            )
-                                            e.preventDefault()
-                                            newIndex = 0
-                                        }
-
-                                        setHighlightedIndex((prev) => ({
-                                            ...prev,
-                                            [i]: newIndex,
-                                        }))
-                                    }}
-                                    className="w-full border border-gray-200 rounded px-3 py-1"
-                                />
-                                {suggestions.length > 0 && (
-                                    <ul className="absolute z-10 w-full bg-white border border-gray-300 rounded mt-1 max-h-40 overflow-y-auto shadow-md">
-                                        {suggestions.map((sugg, idx) => (
-                                            <li
-                                                key={sugg.id}
-                                                onClick={() =>
-                                                    selectSuggestion(i, sugg)
-                                                }
-                                                className={`px-3 py-1 cursor-pointer ${
-                                                    idx === highlighted
-                                                        ? 'bg-blue-200'
-                                                        : 'hover:bg-blue-100'
-                                                }`}
-                                            >
-                                                {sugg.name}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                )}
-                            </div>
-                            <button
-                                onClick={() => removeRow(i)}
-                                className="px-2 py-1 text-sm bg-red-400 text-white rounded"
-                            >
-                                Remove
-                            </button>
-                        </div>
-                    )
-                })}
+                {deck.map((row: DeckLine, i: number) => (
+                    <DeckRow
+                        key={i}
+                        row={row}
+                        index={i}
+                        suggestions={activeSuggestions[i] || []}
+                        highlighted={highlightedIndex[i] ?? 0}
+                        updateRow={updateRow}
+                        selectSuggestion={selectSuggestion}
+                        removeRow={removeRow}
+                        setHighlightedIndex={(index: number) =>
+                            setHighlightedIndex((prev: any) => ({
+                                ...prev,
+                                [i]: index,
+                            }))
+                        }
+                    />
+                ))}
 
                 <div className="flex gap-3 pt-3 items-center">
                     <button
