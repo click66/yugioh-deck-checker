@@ -4,7 +4,7 @@ import type { ConsistencyJobResponse } from './services/consistency'
 import { useCardDatabase } from './hooks/useCardDatabase'
 
 type Card = { id: number; name: string }
-type DeckLine = { card: Card | null; count: number | '' }
+type DeckLine = { card: Card | null; count: number | ''; input: string }
 
 const loadingMessages = [
     'Shuffling the deck',
@@ -37,6 +37,7 @@ export default function App() {
     const defaultDeckLine = {
         card: { id: 44362883, name: 'Branded Fusion' },
         count: 1,
+        input: 'Branded Fusion',
     }
 
     const [deck, setDeck] = useState<DeckLine[]>(() => {
@@ -46,7 +47,7 @@ export default function App() {
         }
         return [defaultDeckLine]
     })
-    console.log(deck)
+
     const [hands, setHands] = useState<Card[][]>(() => {
         const saved = localStorage.getItem(HANDS_STORAGE_KEY)
         return saved ? JSON.parse(saved) : []
@@ -261,17 +262,19 @@ function Step1({ expanded, toggle, deckProps }: any) {
         Record<number, number>
     >({})
 
-    // Update a row
     const updateRow = (
         index: number,
-        field: 'name' | 'count',
+        field: 'input' | 'count',
         value: string,
     ) => {
         const updated = [...deck]
+
         if (field === 'count') {
             updated[index].count = value === '' ? '' : Number(value)
         } else {
-            updated[index].name = value // temporary typed string
+            updated[index].input = value
+            updated[index].card = null
+
             const matches = value
                 ? cardDatabase
                       .filter((c) =>
@@ -279,23 +282,26 @@ function Step1({ expanded, toggle, deckProps }: any) {
                       )
                       .slice(0, 5)
                 : []
+
             setActiveSuggestions((prev) => ({ ...prev, [index]: matches }))
             setHighlightedIndex((prev) => ({ ...prev, [index]: 0 }))
         }
+
         setDeck(updated)
     }
 
-    // Select suggestion
     const selectSuggestion = (index: number, card: Card) => {
         const updated = [...deck]
         updated[index].card = card
-        updated[index].name = card.name
+        updated[index].input = card.name
+
         setDeck(updated)
+
         setActiveSuggestions((prev) => ({ ...prev, [index]: [] }))
         setHighlightedIndex((prev) => ({ ...prev, [index]: 0 }))
     }
 
-    const addRow = () => setDeck([...deck, { card: null, count: 1, name: '' }])
+    const addRow = () => setDeck([...deck, { card: null, count: 1, input: '' }])
     const removeRow = (i: number) =>
         setDeck(deck.filter((_: any, idx: number) => idx !== i))
 
@@ -305,7 +311,6 @@ function Step1({ expanded, toggle, deckProps }: any) {
     )
     const blankCount = Math.max(deckSize - enteredTotal, 0)
 
-    // ------------------ YDK Import ------------------
     const importYdkFile = (file: File) => {
         const reader = new FileReader()
         reader.onload = () => {
@@ -341,7 +346,11 @@ function Step1({ expanded, toggle, deckProps }: any) {
                 .map(([id, count]) => {
                     const card = cardDatabase.find((c) => c.id === id)
                     return card
-                        ? { card, count: count as number | '' }
+                        ? {
+                              card,
+                              count: count as number | '',
+                              input: card.name,
+                          }
                         : undefined
                 })
                 .filter((c) => c !== undefined)
@@ -395,15 +404,17 @@ function Step1({ expanded, toggle, deckProps }: any) {
                             />
                             <div className="flex-1 relative">
                                 <input
-                                    key={row.card?.id ?? i}
                                     type="text"
-                                    defaultValue={row.card?.name ?? ''}
+                                    value={row.input}
                                     placeholder="Card name"
                                     onChange={(e) =>
-                                        updateRow(i, 'name', e.target.value)
+                                        updateRow(i, 'input', e.target.value)
                                     }
                                     onKeyDown={(e) => {
-                                        if (!suggestions.length) return
+                                        if (!suggestions.length) {
+                                            return
+                                        }
+
                                         let newIndex = highlighted
 
                                         if (e.key === 'ArrowDown') {
