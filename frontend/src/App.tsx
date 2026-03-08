@@ -475,7 +475,7 @@ function Step2({ expanded, toggle, handProps, setExpandedSteps }: any) {
                         key={i}
                         className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 flex flex-wrap items-center justify-between gap-2"
                     >
-                        <div className="flex flex-wrap gap-2 min-h-[3rem]">
+                        <div className="flex flex-wrap gap-2">
                             {hand.map((c, idx) => {
                                 const isWildcard = (c as Wildcard).wildcard
                                 return (
@@ -537,7 +537,7 @@ function Step2({ expanded, toggle, handProps, setExpandedSteps }: any) {
                             Select Cards
                         </h3>
 
-                        <div className="flex flex-wrap gap-2 mb-2 min-h-[3rem]">
+                        <div className="flex flex-wrap gap-2 mb-2 min-h-[2rem]">
                             {newHand.map(
                                 (card: Card | Wildcard, idx: number) => (
                                     <div
