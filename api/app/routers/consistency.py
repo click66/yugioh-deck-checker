@@ -22,6 +22,7 @@ class ConsistencyJobRequest(BaseModel):
     ratios: List[int]
     ideal_hands: List[List[str]]
     num_hands: int
+    use_wildcards: Optional[bool] = None
 
 
 class ConsistencyJobResponse(BaseModel):
@@ -52,6 +53,7 @@ async def create_job(
             "ratios": payload.ratios,
             "ideal_hands": payload.ideal_hands,
             "num_hands": payload.num_hands,
+            "use_wildcards": payload.use_wildcards,
         },
     )
 

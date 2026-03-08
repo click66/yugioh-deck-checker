@@ -56,7 +56,9 @@ def lambda_handler(event, context):
     try:
         if use_wildcards:
             def hand_checker(hand, ideal_counters): return hand_is_wild(
-                hand, ideal_counters, card_database, wildcard_lookup
+                hand,
+                ideal_counters,
+                wildcard_lookup,
             )
         else:
             hand_checker = hand_is_good

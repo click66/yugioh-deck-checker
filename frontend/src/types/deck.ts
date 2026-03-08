@@ -3,8 +3,10 @@ export type Card = {
     name: string
 }
 
+export type Wildcard = { id: string; name: string; wildcard: true }
+
 export type DeckLine = {
-    card: Card | null
+    card: Card | Wildcard | null
     input: string
     count: number | ''
 }

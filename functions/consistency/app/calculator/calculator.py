@@ -1,7 +1,6 @@
-from typing import Sequence, Union, Callable, Dict, Any, List
 import random
 from collections import Counter
-from typing import List, Sequence, Union
+from typing import Any, Callable, Dict, List, Sequence, Union
 
 from app.calculator.exceptions import InvalidCardCountsError
 from app.calculator.result import ConsistencyResult
@@ -32,7 +31,6 @@ def hand_is_good(
 def hand_is_wild(
     hand: Sequence[int],
     ideal_hands: Sequence[Union[Sequence[Union[int, str, Callable[[int], bool]]], Counter]],
-    card_database: Dict[int, Dict[str, Any]],
     wildcard_lookup: Dict[str, Callable[[int], bool]],
 ) -> bool:
     """

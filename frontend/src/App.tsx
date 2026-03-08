@@ -4,9 +4,7 @@ import type { ConsistencyJobResponse } from './services/consistency'
 import { useCardDatabase } from './hooks/useCardDatabase'
 import { DeckRow } from './components/dca/deck-row'
 import { parseYdk } from './services/ydk-import'
-
-type Card = { id: number; name: string }
-type DeckLine = { card: Card | null; count: number | ''; input: string }
+import type { DeckLine, Card, Wildcard } from './types/deck'
 
 const loadingMessages = [
     'Shuffling the deck',
@@ -22,6 +20,12 @@ const loadingMessages = [
     'Initiating duel simulation',
     'Calculating player strength',
     'Performing quantum analysis',
+]
+
+const wildcardOptions: Wildcard[] = [
+    { id: 'any_monster', name: 'Any Monster', wildcard: true },
+    { id: 'any_spell', name: 'Any Spell', wildcard: true },
+    { id: 'any_trap', name: 'Any Trap', wildcard: true },
 ]
 
 const DECK_STORAGE_KEY = 'deck'
@@ -50,14 +54,16 @@ export default function App() {
         return [defaultDeckLine]
     })
 
-    const [hands, setHands] = useState<Card[][]>(() => {
+    type HandItem = Card | Wildcard
+
+    const [hands, setHands] = useState<HandItem[][]>(() => {
         const saved = localStorage.getItem(HANDS_STORAGE_KEY)
         return saved ? JSON.parse(saved) : []
     })
 
     const [deckSize, setDeckSize] = useState(40)
     const [showHandModal, setShowHandModal] = useState(false)
-    const [newHand, setNewHand] = useState<Card[]>([])
+    const [newHand, setNewHand] = useState<HandItem[]>([])
     const [job, setJob] = useState<ConsistencyJobResponse | null>(null)
     const [loading, setLoading] = useState(false)
     const [loadingMessage, setLoadingMessage] = useState(
@@ -157,7 +163,9 @@ export default function App() {
             deckcount: deckSize,
             names: validatedDeck.map((d) => `${d.card!.id}`),
             ratios: validatedDeck.map((d) => Number(d.count) || 0),
-            ideal_hands: hands.map((hand) => hand.map((c) => `${c.id}`)),
+            ideal_hands: hands.map((hand) =>
+                hand.map((c) => (typeof c.id === 'number' ? `${c.id}` : c.id)),
+            ),
             num_hands: hands.length,
             use_wildcards: useWildcards,
         }
@@ -538,6 +546,32 @@ function Step2({ expanded, toggle, handProps }: any) {
                                 ))}
                             </div>
                         )}
+
+                        <div className="mb-4">
+                            <div className="text-sm text-gray-600 mb-2">
+                                Wildcards
+                            </div>
+                            <div className="flex gap-2 flex-wrap">
+                                {wildcardOptions.map((wc) => (
+                                    <button
+                                        key={wc.id}
+                                        type="button"
+                                        onClick={() =>
+                                            setNewHand([...newHand, wc])
+                                        }
+                                        className="px-3 py-2 rounded-lg border border-purple-200 bg-purple-50 hover:bg-purple-100"
+                                    >
+                                        {wc.name} (
+                                        {
+                                            newHand.filter(
+                                                (c: any) => c.id === wc.id,
+                                            ).length
+                                        }
+                                        )
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
 
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-80 overflow-y-auto">
                             {selectableDeck.map((d: { card: Card }) => (
