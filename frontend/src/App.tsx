@@ -127,13 +127,6 @@ export default function App() {
         const cleaned = deck.filter((d) => d.card !== null)
 
         setDeck(cleaned)
-        setHands((prev) =>
-            prev
-                .map((h) =>
-                    h.filter((c) => cleaned.some((d) => d.card?.id === c.id)),
-                )
-                .filter((h) => h.length > 0),
-        )
         setJob(null)
         setExpandedSteps({ 1: false, 2: true, 3: false })
     }
