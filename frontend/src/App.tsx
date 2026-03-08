@@ -69,6 +69,7 @@ export default function App() {
     const [loadingMessage, setLoadingMessage] = useState(
         loadingMessages[Math.floor(Math.random() * loadingMessages.length)],
     )
+    const [error, setError] = useState<string | null>(null)
     const [useWildcards, setUseWildcards] = useState(false)
 
     useEffect(() => {
@@ -93,26 +94,12 @@ export default function App() {
 
     useEffect(() => {
         const activeJobId = localStorage.getItem('activeJobId')
-        if (!activeJobId) {
-            return
-        }
+        if (!activeJobId) return
 
         setExpandedSteps((prev) => ({ ...prev, 3: true }))
+        setLoading(true)
 
-        const resumePoll = async () => {
-            setLoading(true)
-            const result = await getJob(activeJobId)
-            setJob(result)
-
-            if (result.status === JobStatus.COMPLETED) {
-                setLoading(false)
-                localStorage.removeItem('activeJobId')
-            } else {
-                setTimeout(resumePoll, 5000)
-            }
-        }
-
-        resumePoll()
+        pollJob(activeJobId)
     }, [])
 
     const toggleStep = (step: number) => {
@@ -142,6 +129,29 @@ export default function App() {
 
     const clearDeck = () => setDeck([])
 
+    const pollJob = async (jobId: string) => {
+        const result = await getJob(jobId)
+
+        if (!result) {
+            setLoading(false)
+            localStorage.removeItem('activeJobId')
+            return
+        }
+
+        setJob(result)
+
+        if (result.status === JobStatus.COMPLETED) {
+            setLoading(false)
+            localStorage.removeItem('activeJobId')
+        } else if (result.status === JobStatus.FAILED) {
+            setLoading(false)
+            setError(result.error?.detail || 'Job failed')
+            localStorage.removeItem('activeJobId')
+        } else {
+            setTimeout(() => pollJob(jobId), 5000)
+        }
+    }
+
     const runAnalysis = async () => {
         if (deck.length === 0 || hands.length === 0) {
             return
@@ -149,6 +159,7 @@ export default function App() {
 
         const validatedDeck = deck.filter((d) => d.card !== null)
 
+        setError(null)
         setLoading(true)
         setExpandedSteps((prev) => ({ ...prev, 2: false }))
 
@@ -168,24 +179,8 @@ export default function App() {
 
         if (jobResp.jobId) {
             localStorage.setItem('activeJobId', jobResp.jobId)
+            pollJob(jobResp.jobId)
         }
-
-        const poll = async () => {
-            if (!jobResp.jobId) {
-                return
-            }
-
-            const result = await getJob(jobResp.jobId)
-            setJob(result)
-
-            if (result.status === JobStatus.COMPLETED) {
-                setLoading(false)
-                localStorage.removeItem('activeJobId')
-            } else {
-                setTimeout(poll, 5000)
-            }
-        }
-        poll()
     }
 
     const deckProps = {
@@ -206,7 +201,14 @@ export default function App() {
         addHand,
         deck,
     }
-    const analysisProps = { hands, job, loading, loadingMessage, runAnalysis }
+    const analysisProps = {
+        hands,
+        job,
+        loading,
+        loadingMessage,
+        runAnalysis,
+        error,
+    }
 
     return (
         <>
@@ -610,7 +612,8 @@ function Step2({ expanded, toggle, handProps }: any) {
 }
 
 function Step3({ expanded, toggle, analysisProps, children }: any) {
-    const { hands, job, loading, loadingMessage, runAnalysis } = analysisProps
+    const { hands, job, loading, loadingMessage, runAnalysis, error } =
+        analysisProps
     const p5 = job?.result?.value ? parseFloat(job.result.value) : null
     const p6 = job?.result?.value_6 ? parseFloat(job.result.value_6) : null
 
@@ -632,6 +635,12 @@ function Step3({ expanded, toggle, analysisProps, children }: any) {
             )}
 
             {children}
+
+            {error && (
+                <div className="mt-4 p-3 border border-red-300 bg-red-50 text-red-700 rounded">
+                    {error}
+                </div>
+            )}
 
             {loading && (
                 <div className="flex flex-col items-center gap-4 py-6">

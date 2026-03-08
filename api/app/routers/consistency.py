@@ -25,10 +25,16 @@ class ConsistencyJobRequest(BaseModel):
     use_wildcards: Optional[bool] = None
 
 
+class ConsistencyJobError(BaseModel):
+    code: str
+    detail: str
+
+
 class ConsistencyJobResponse(BaseModel):
     job_id: str
     status: str
     result: Optional[dict] = None
+    error: Optional[ConsistencyJobError] = None
 
 
 @router.post("/jobs/create", response_model=ConsistencyJobResponse)
@@ -84,8 +90,12 @@ async def get_job_status(
         raise HTTPException(status_code=404, detail="Job not found")
 
     response_data = {"job_id": job.job_id, "status": job.status}
+
     if hasattr(job, "result") and job.result is not None:
         response_data["result"] = job.result
+
+    if hasattr(job, "error") and job.error is not None:
+        response_data["error"] = job.error
 
     try:
         return ConsistencyJobResponse(**response_data)
@@ -95,5 +105,5 @@ async def get_job_status(
         )
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to construct response: {e}"
+            detail=f"Failed to construct response: {e}",
         )
