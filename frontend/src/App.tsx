@@ -70,7 +70,6 @@ export default function App() {
         loadingMessages[Math.floor(Math.random() * loadingMessages.length)],
     )
     const [error, setError] = useState<string | null>(null)
-    const [useWildcards, setUseWildcards] = useState(false)
 
     useEffect(() => {
         localStorage.setItem(DECK_STORAGE_KEY, JSON.stringify(deck))
@@ -171,7 +170,7 @@ export default function App() {
                 hand.map((c) => (typeof c.id === 'number' ? `${c.id}` : c.id)),
             ),
             num_hands: hands.length,
-            use_wildcards: useWildcards,
+            use_wildcards: true,
         }
 
         const jobResp = await createJob(payload)
@@ -215,7 +214,7 @@ export default function App() {
             <div className="bg-gray-50 py-10">
                 <div className="max-w-3xl mx-auto space-y-6">
                     <h1 className="text-3xl font-semibold text-center text-gray-800">
-                        Yu-Gi-Oh Deck Consistency Analysis
+                        Yu-Gi-Oh! Deck Consistency Analysis
                     </h1>
                     <p className="px-2">
                         A tool for estimating a deck's consistency at drawing
@@ -224,8 +223,7 @@ export default function App() {
                     <p className="px-2">
                         Configure your deck and create a set of ideal hands; the
                         analysis will generate 1 million random hands to give an
-                        actual result of how often you will open one of your
-                        ideal hands.
+                        actual result of how often you will open one of them.
                     </p>
 
                     <Step1
@@ -242,25 +240,7 @@ export default function App() {
                         expanded={expandedSteps[3]}
                         toggle={() => toggleStep(3)}
                         analysisProps={analysisProps}
-                    >
-                        <div className="flex items-center mt-4">
-                            <input
-                                type="checkbox"
-                                id="useWildcards"
-                                checked={useWildcards}
-                                onChange={(e) =>
-                                    setUseWildcards(e.target.checked)
-                                }
-                                className="mr-2"
-                            />
-                            <label
-                                htmlFor="useWildcards"
-                                className="text-sm text-gray-700"
-                            >
-                                Use wildcards (experimental feature)
-                            </label>
-                        </div>
-                    </Step3>
+                    />
                 </div>
             </div>
             <footer className="w-full bg-gray-100 border-t border-gray-300 mt-10">
@@ -475,29 +455,47 @@ function Step2({ expanded, toggle, handProps }: any) {
             >
                 Add Ideal Hand
             </button>
+
             {hands.length === 0 && (
                 <div className="text-gray-500 text-sm">
                     No ideal hands defined yet.
                 </div>
             )}
+
             <div className="space-y-2">
-                {hands.map((hand: Card[], i: number) => (
+                {hands.map((hand: (Card | Wildcard)[], i: number) => (
                     <div
                         key={i}
-                        className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 flex justify-between"
+                        className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 flex flex-wrap items-center justify-between gap-2"
                     >
-                        <span>{hand.map((c) => c.name).join(', ')}</span>
+                        <div className="flex flex-wrap gap-2">
+                            {hand.map((c, idx) => {
+                                const isWildcard = (c as Wildcard).wildcard
+                                return (
+                                    <span
+                                        key={idx}
+                                        className={`inline-flex items-center px-2 py-1 rounded-full text-sm font-medium ${
+                                            isWildcard
+                                                ? 'bg-purple-100 text-purple-700'
+                                                : 'bg-gray-200 text-gray-800'
+                                        }`}
+                                    >
+                                        {c.name}
+                                    </span>
+                                )
+                            })}
+                        </div>
                         <button
                             onClick={() =>
                                 setHands(
                                     hands.filter(
-                                        (_: any, idx: number) => idx !== i,
+                                        (_: any, idx2: number) => idx2 !== i,
                                     ),
                                 )
                             }
-                            className="text-red-400 text-sm "
+                            className="px-2 py-1 text-sm bg-red-400 text-white rounded hover:bg-red-500"
                         >
-                            remove
+                            Remove
                         </button>
                     </div>
                 ))}
@@ -505,48 +503,54 @@ function Step2({ expanded, toggle, handProps }: any) {
 
             {showHandModal && (
                 <div
-                    className="fixed inset-0 bg-black/30 flex items-center justify-center"
+                    className="fixed inset-0 bg-black/30 flex items-center justify-center p-4"
                     onClick={() => setShowHandModal(false)}
                 >
                     <div
-                        className="bg-white rounded-xl shadow-lg p-6 w-full max-w-xl"
+                        className="bg-white rounded-xl shadow-lg p-6 w-full max-w-xl flex flex-col gap-4 max-h-[80vh] overflow-y-auto"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <h3 className="text-lg font-medium mb-4">
+                        <h3 className="text-lg font-semibold mb-2 text-center">
                             Select Cards
                         </h3>
 
                         {newHand.length > 0 && (
-                            <div className="mb-3 text-sm text-gray-700">
-                                Selected:{' '}
-                                {newHand.map((card: Card, idx: number) => (
-                                    <span
-                                        key={idx}
-                                        className="inline-flex items-center mr-1"
-                                    >
-                                        {card.name}
-                                        <button
-                                            type="button"
-                                            onClick={() =>
-                                                setNewHand([
-                                                    ...newHand.slice(0, idx),
-                                                    ...newHand.slice(idx + 1),
-                                                ])
-                                            }
-                                            className="ml-1 text-red-500 "
+                            <div className="flex flex-wrap gap-2 mb-2">
+                                {newHand.map(
+                                    (card: Card | Wildcard, idx: number) => (
+                                        <div
+                                            key={idx}
+                                            className="flex items-center gap-1 px-2 py-1 bg-gray-100 rounded shadow-sm text-sm"
                                         >
-                                            ×
-                                        </button>
-                                    </span>
-                                ))}
+                                            {card.name}
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    setNewHand([
+                                                        ...newHand.slice(
+                                                            0,
+                                                            idx,
+                                                        ),
+                                                        ...newHand.slice(
+                                                            idx + 1,
+                                                        ),
+                                                    ])
+                                                }
+                                                className="text-red-500 hover:text-red-700"
+                                            >
+                                                ×
+                                            </button>
+                                        </div>
+                                    ),
+                                )}
                             </div>
                         )}
 
                         <div className="mb-4">
-                            <div className="text-sm text-gray-600 mb-2">
+                            <div className="text-sm text-gray-600 mb-1 font-medium">
                                 Wildcards
                             </div>
-                            <div className="flex gap-2 flex-wrap">
+                            <div className="grid grid-cols-3 gap-2">
                                 {wildcardOptions.map((wc) => (
                                     <button
                                         key={wc.id}
@@ -554,7 +558,7 @@ function Step2({ expanded, toggle, handProps }: any) {
                                         onClick={() =>
                                             setNewHand([...newHand, wc])
                                         }
-                                        className="px-3 py-2 rounded-lg border border-purple-200 bg-purple-50 hover:bg-purple-100"
+                                        className="px-3 py-2 rounded-lg border border-purple-200 bg-purple-50 hover:bg-purple-100 text-sm font-medium"
                                     >
                                         {wc.name} (
                                         {
@@ -568,38 +572,45 @@ function Step2({ expanded, toggle, handProps }: any) {
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-80 overflow-y-auto">
-                            {selectableDeck.map((d: { card: Card }) => (
-                                <button
-                                    key={d.card.id}
-                                    type="button"
-                                    onClick={() =>
-                                        setNewHand([...newHand, d.card])
-                                    }
-                                    className="px-3 py-2 rounded-lg border border-gray-200 hover:bg-gray-50"
-                                >
-                                    {d.card.name} (
-                                    {
-                                        newHand.filter(
-                                            (c: Card) => c === d.card,
-                                        ).length
-                                    }
-                                    )
-                                </button>
-                            ))}
+                        {/* Deck cards */}
+                        <div className="mb-4">
+                            <div className="text-sm text-gray-600 mb-1 font-medium">
+                                Deck Cards
+                            </div>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                {selectableDeck.map((d: { card: Card }) => (
+                                    <button
+                                        key={d.card.id}
+                                        type="button"
+                                        onClick={() =>
+                                            setNewHand([...newHand, d.card])
+                                        }
+                                        className="px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 text-sm text-gray-700"
+                                    >
+                                        {d.card.name} (
+                                        {
+                                            newHand.filter(
+                                                (c: Card) => c === d.card,
+                                            ).length
+                                        }
+                                        )
+                                    </button>
+                                ))}
+                            </div>
                         </div>
 
-                        <div className="flex justify-end gap-3 mt-5">
+                        {/* Actions */}
+                        <div className="flex justify-end gap-3 mt-2">
                             <button
                                 onClick={() => setShowHandModal(false)}
-                                className="px-4 py-2 bg-gray-200 rounded "
+                                className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={addHand}
                                 disabled={newHand.length === 0}
-                                className="px-4 py-2 bg-blue-500 text-white rounded  disabled:opacity-50"
+                                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
                             >
                                 Save
                             </button>
