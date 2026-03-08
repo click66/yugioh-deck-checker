@@ -45,38 +45,41 @@ def hand_is_wild(
     """
     hand_counter = Counter(hand)
 
-    # Precompute counts for hand by card type for wildcard matching
-    type_counts = {
-        "spell": sum(1 for card in hand if card_database[int(card)]["frameType"] == "spell"),
-        "trap": sum(1 for card in hand if card_database[int(card)]["frameType"] == "trap"),
-        "effect": sum(1 for card in hand if card_database[int(card)]["frameType"] == "effect"),
-        # Add more wildcard types if needed
-    }
-
     def match_pattern(pattern: Union[Sequence[Union[int, str]], Counter]) -> bool:
-        # Convert to counter if not already
         pat_counter = pattern if isinstance(
-            pattern,
-            Counter,
-        ) else Counter(pattern)
+            pattern, Counter) else Counter(pattern)
 
-        remaining_types = type_counts.copy()
+        # Track remaining wildcard counts
+        remaining_types = {}
+
+        # First subtract exact cards from hand_counter
         for card, count in pat_counter.items():
-            if isinstance(card, str) and card.startswith("any_"):
-                logger.info(
-                    'Detected wildcard %s in pattern %s for hand %s',
-                    card,
-                    pat_counter,
-                    hand
-                )
-                # Wildcard: "any_spell" -> "spell"
-                type_name = card[4:]
-                if remaining_types.get(type_name, 0) < count:
+            if not (isinstance(card, str) and card.startswith("any_")):
+                card_info = card_database.get(int(card))
+                if card_info is None:
+                    # exact card missing -> pattern cannot match
                     return False
-                remaining_types[type_name] -= count
-            else:
+                # Decrement remaining count of this card type for potential wildcard
+                remaining_types.setdefault(card_info["frameType"], 0)
+                remaining_types[card_info["frameType"]] -= count
                 if hand_counter[card] < count:
                     return False
+
+        # Now check wildcards
+        for card, count in pat_counter.items():
+            if isinstance(card, str) and card.startswith("any_"):
+                type_name = card[4:]
+                # Count cards of this type in hand (excluding exact matches already subtracted)
+                type_count = sum(
+                    1
+                    for c in hand
+                    if card_database.get(int(c), {}).get("frameType") == type_name
+                )
+                # subtract exact cards
+                type_count += remaining_types.get(type_name, 0)
+                if type_count < count:
+                    return False
+
         return True
 
     return any(match_pattern(pattern) for pattern in ideal_hands)
@@ -102,7 +105,7 @@ def simple_consistency(
         raise InvalidCardCountsError("Ratios add up to more than Deck Count")
     if blanks > 0:
         ratios.append(blanks)
-        names.append("blank")
+        names.append(00000000)
 
     # Build deck
     deck: List[str] = [
