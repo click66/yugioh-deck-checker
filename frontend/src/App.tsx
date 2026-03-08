@@ -84,8 +84,35 @@ export default function App() {
         return () => clearInterval(interval)
     }, [loading])
 
+    useEffect(() => {
+        const activeJobId = localStorage.getItem('activeJobId')
+        if (!activeJobId) {
+            return
+        }
+
+        setExpandedSteps((prev) => ({ ...prev, 3: true }))
+
+        const resumePoll = async () => {
+            setLoading(true)
+            const result = await getJob(activeJobId)
+            setJob(result)
+
+            if (result.status === JobStatus.COMPLETED) {
+                setLoading(false)
+                localStorage.removeItem('activeJobId')
+            } else {
+                setTimeout(resumePoll, 5000)
+            }
+        }
+
+        resumePoll()
+    }, [])
+
     const toggleStep = (step: number) => {
-        if (step === 3 && loading) return
+        if (step === 3 && loading) {
+            return
+        }
+
         setExpandedSteps((prev) => ({ ...prev, [step]: !prev[step] }))
     }
 
@@ -136,12 +163,21 @@ export default function App() {
         const jobResp = await createJob(payload)
         setJob(jobResp)
 
+        if (jobResp.jobId) {
+            localStorage.setItem('activeJobId', jobResp.jobId)
+        }
+
         const poll = async () => {
-            if (!jobResp.jobId) return
+            if (!jobResp.jobId) {
+                return
+            }
+
             const result = await getJob(jobResp.jobId)
             setJob(result)
+
             if (result.status === JobStatus.COMPLETED) {
                 setLoading(false)
+                localStorage.removeItem('activeJobId')
             } else {
                 setTimeout(poll, 5000)
             }
@@ -237,11 +273,11 @@ export default function App() {
     )
 }
 
-function Panel({ title, expanded, toggle, children }: any) {
+function Panel({ title, expanded, toggle, children, expandable = true }: any) {
     return (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 text-sm">
             <div
-                className="px-5 py-3 border-b border-gray-200 font-medium text-lg flex justify-between"
+                className={`px-5 py-3 border-b border-gray-200 font-medium text-lg flex justify-between ${expandable ? 'cursor-pointer' : 'cursor-not-allowed'}`}
                 onClick={toggle}
             >
                 {title}
@@ -535,7 +571,8 @@ function Step3({ expanded, toggle, analysisProps }: any) {
         <Panel
             title="Step 3 — Run Analysis"
             expanded={expanded}
-            toggle={() => !loading && toggle()}
+            toggle={toggle}
+            expandable={!loading}
         >
             {!loading && (
                 <button
