@@ -34,57 +34,63 @@ def hand_is_wild(
     wildcard_lookup: Dict[str, Callable[[int], bool]],
 ) -> bool:
     """
-    Return True if the hand matches any of the ideal hands.
+    Return True if the hand matches any ideal hand.
     Supports:
       - exact card IDs (int)
       - wildcard strings (via wildcard_lookup)
-      - callable predicates (accepting card_id)
-    Optimized: precomputes counters for exact IDs, handles wildcards dynamically.
+      - callable predicates
+    Accepts Counters containing exact IDs and wildcards.
     """
 
     hand_counter = Counter(hand)
 
-    # Precompute pattern counters for exact IDs
+    # Preprocess patterns
     processed_patterns: List[Dict[str, Any]] = []
 
     for pattern in ideal_hands:
         if isinstance(pattern, Counter):
-            # Already optimized
-            processed_patterns.append({"counter": pattern, "wildcards": []})
-            continue
+            items = list(pattern.items())
+        else:
+            # Convert list pattern to (item, count) pairs
+            c = Counter(pattern)
+            items = list(c.items())
 
         exact_counter = Counter()
-        wildcards: List[Union[str, Callable[[int], bool]]] = []
+        wildcards: List[Union[str, Callable]] = []
 
-        for target in pattern:
-            if isinstance(target, int):
-                exact_counter[target] += 1
-            elif isinstance(target, (str, Callable)):
-                wildcards.append(target)
+        for key, count in items:
+            if isinstance(key, int):
+                exact_counter[key] += count
+            elif isinstance(key, str):
+                # wildcard string repeated 'count' times
+                wildcards.extend([key] * count)
+            elif callable(key):
+                wildcards.extend([key] * count)
             else:
-                raise TypeError(f"Unsupported pattern type: {type(target)}")
+                raise TypeError(f"Unsupported pattern type: {type(key)}")
 
         processed_patterns.append(
-            {"counter": exact_counter, "wildcards": wildcards})
+            {"counter": exact_counter,
+             "wildcards": wildcards,
+             })
 
-    # Check each pattern
+    # Match patterns
     for pat in processed_patterns:
         remaining = hand_counter.copy()
 
-        # First, match exact IDs
+        # Match exact IDs first
         exact_counter: Counter = pat["counter"]
         for card_id, count in exact_counter.items():
             if remaining[card_id] < count:
-                break  # Not enough cards
+                break
             remaining[card_id] -= count
         else:
-            # Then try to match wildcard / callable positions
+            # Match wildcards / callable predicates
             for target in pat["wildcards"]:
                 found = False
                 for card_id in remaining:
                     if remaining[card_id] <= 0:
                         continue
-
                     if isinstance(target, str):
                         predicate = wildcard_lookup.get(target)
                         if predicate is None:
@@ -101,8 +107,7 @@ def hand_is_wild(
                 if not found:
                     break  # This pattern fails
             else:
-                # All wildcards matched
-                return True
+                return True  # All wildcards matched
 
     return False
 
