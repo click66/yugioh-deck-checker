@@ -33,6 +33,7 @@ def simple_consistency(
     ratios: Sequence[int],
     names: Sequence[str],
     ideal_hands: Sequence[Sequence[str]],
+    hand_checker: callable,
     num_hands: int = 1_000_000,
 ) -> ConsistencyResult:
     """Estimate probability that a random 5-card (and 6-card) hand matches an ideal hand."""
@@ -65,13 +66,13 @@ def simple_consistency(
     for _ in range(num_hands):
         # Draw 5-card hand
         hand5 = random.sample(deck, 5)
-        if hand_is_good(hand5, ideal_counters):
+        if hand_checker(hand5, ideal_counters):
             good_5 += 1
 
         # Draw 6-card hand only if deck >= 6
         if len(deck) >= 6:
             hand6 = random.sample(deck, 6)
-            if hand_is_good(hand6, ideal_counters):
+            if hand_checker(hand6, ideal_counters):
                 good_6 += 1
 
     p5 = good_5 / num_hands

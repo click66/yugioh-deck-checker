@@ -1,7 +1,7 @@
 import os
 import boto3
 import logging
-from app.calculator.calculator import simple_consistency
+from app.calculator.calculator import hand_is_good, simple_consistency
 
 logger = logging.getLogger()
 logger.setLevel("INFO")
@@ -44,14 +44,15 @@ def lambda_handler(event, context):
             names=names,
             ideal_hands=ideal_hands,
             num_hands=num_hands,
+            hand_checker=hand_is_good,
         )
         status = "completed"
     except Exception as e:
         logger.info(f"Job {job_id} failed: {e}")
         result = None
         status = "failed"
-    
-    logger.info(f"Writing result...")
+
+    logger.info("Writing result...")
 
     expression_attr_names = {"#s": "status"}
     expression_attr_values = {":status": {"S": status}}
