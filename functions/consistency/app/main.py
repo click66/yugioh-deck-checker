@@ -1,6 +1,7 @@
 import os
 import boto3
 import logging
+import json
 from app.calculator.calculator import hand_is_good, hand_is_wild, simple_consistency
 
 logger = logging.getLogger()
@@ -9,22 +10,26 @@ logger.setLevel("INFO")
 TABLE_NAME = f"{os.environ.get('ENV_PREFIX', 'dev')}-jobs"
 dynamodb = boto3.client("dynamodb")
 
-# Minimal mock card database keyed by card ID
-card_database = {
-    80181649: {"frameType": "spell", "attribute": None, "race": None, "name": "A Case for K9"},
-    86988864: {"frameType": "effect", "attribute": None, "race": "Beast", "name": "3-Hump Lacooda"},
-    14261867: {"frameType": "effect", "attribute": "DARK", "race": "Insect", "name": "8-Claws Scorpion"},
-    23771716: {"frameType": "normal", "attribute": "WATER", "race": "Fish", "name": "7 Colored Fish"},
-    6850209: {"frameType": "spell", "attribute": "DARK", "race": "Quick-Play", "name": "A Deal with Dark Ruler"},
-    68170903: {"frameType": "trap", "attribute": None, "race": None, "name": "A Feint Plan"},
-}
+CARD_DATABASE_BUCKET_NAME = f"{os.environ.get('ENV_PREFIX', 'dev')}-card-database"
+CARD_DATABASE_KEY = "cards-detailed.json"
+s3 = boto3.client("s3")
 
-# Wildcard definitions for IDs
-wildcard_lookup = {
-    "any_spell": lambda card_id: card_database[card_id]["frameType"] == "spell",
-    "any_trap": lambda card_id: card_database[card_id]["frameType"] == "trap",
-    "any_dark": lambda card_id: card_database[card_id].get("attribute") == "DARK",
-}
+# Minimal mock card database keyed by card ID
+# card_database = {
+#     80181649: {"frameType": "spell", "attribute": None, "race": None, "name": "A Case for K9"},
+#     86988864: {"frameType": "effect", "attribute": None, "race": "Beast", "name": "3-Hump Lacooda"},
+#     14261867: {"frameType": "effect", "attribute": "DARK", "race": "Insect", "name": "8-Claws Scorpion"},
+#     23771716: {"frameType": "normal", "attribute": "WATER", "race": "Fish", "name": "7 Colored Fish"},
+#     6850209: {"frameType": "spell", "attribute": "DARK", "race": "Quick-Play", "name": "A Deal with Dark Ruler"},
+#     68170903: {"frameType": "trap", "attribute": None, "race": None, "name": "A Feint Plan"},
+# }
+
+# # Wildcard definitions for IDs
+# wildcard_lookup = {
+#     "any_spell": lambda card_id: card_database[card_id]["frameType"] == "spell",
+#     "any_trap": lambda card_id: card_database[card_id]["frameType"] == "trap",
+#     "any_dark": lambda card_id: card_database[card_id].get("attribute") == "DARK",
+# }
 
 
 def _serialize_result(result):
@@ -53,6 +58,18 @@ def lambda_handler(event, context):
 
     logger.info(f"Job {job_id} started. use_wildcards={use_wildcards}")
 
+    logger.info("Reading card database...")
+
+    try:
+        resp = s3.get_object(
+            Bucket=CARD_DATABASE_BUCKET_NAME, Key=CARD_DATABASE_KEY)
+        card_list = json.load(resp["Body"])
+        card_database = {card["id"]: card for card in card_list}
+        logger.info("Card database loaded successfully from S3.")
+    except Exception as e:
+        logger.error(f"Failed to load card database from S3: {e}")
+        card_database = {}
+
     try:
         if use_wildcards:
             def hand_checker(hand, ideal_counters): return hand_is_wild(
@@ -73,7 +90,7 @@ def lambda_handler(event, context):
         )
         status = "completed"
     except Exception as e:
-        logger.info(f"Job {job_id} failed: {e}")
+        logger.error(f"Job {job_id} failed: {e}")
         result = None
         status = "failed"
 
