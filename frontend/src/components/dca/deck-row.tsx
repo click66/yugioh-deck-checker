@@ -1,26 +1,63 @@
+import { useState } from 'react'
+import { useCardDatabase } from '../../hooks/useCardDatabase'
 import type { Card, DeckLine } from '../../types/deck'
 
 type DeckRowProps = {
     row: DeckLine
     index: number
-    suggestions: Card[]
-    highlighted: number
     updateRow: (index: number, field: 'input' | 'count', value: string) => void
     selectSuggestion: (index: number, card: Card) => void
     removeRow: (index: number) => void
-    setHighlightedIndex: (index: number) => void
 }
 
 export function DeckRow({
     row,
     index,
-    suggestions,
-    highlighted,
     updateRow,
     selectSuggestion,
     removeRow,
-    setHighlightedIndex,
 }: DeckRowProps) {
+    const { cards: cardDatabase } = useCardDatabase()
+    const [suggestions, setSuggestions] = useState<Card[]>([])
+    const [highlighted, setHighlighted] = useState(0)
+
+    const handleInputChange = (value: string) => {
+        updateRow(index, 'input', value)
+
+        const matches = value
+            ? cardDatabase
+                  .filter((c) =>
+                      c.name.toLowerCase().includes(value.toLowerCase()),
+                  )
+                  .slice(0, 5)
+            : []
+
+        setSuggestions(matches)
+        setHighlighted(0)
+    }
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (!suggestions.length) return
+
+        let newIndex = highlighted
+
+        if (e.key === 'ArrowDown') {
+            newIndex = (highlighted + 1) % suggestions.length
+            e.preventDefault()
+        } else if (e.key === 'ArrowUp') {
+            newIndex =
+                (highlighted - 1 + suggestions.length) % suggestions.length
+            e.preventDefault()
+        } else if (e.key === 'Enter') {
+            selectSuggestion(index, suggestions[highlighted])
+            setSuggestions([])
+            e.preventDefault()
+            newIndex = 0
+        }
+
+        setHighlighted(newIndex)
+    }
+
     return (
         <div className="relative flex gap-3 items-center bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
             <input
@@ -37,34 +74,14 @@ export function DeckRow({
                     type="text"
                     value={row.input}
                     placeholder="Card name"
-                    onChange={(e) => updateRow(index, 'input', e.target.value)}
-                    onKeyDown={(e) => {
-                        if (!suggestions.length) return
-
-                        let newIndex = highlighted
-
-                        if (e.key === 'ArrowDown') {
-                            newIndex = (highlighted + 1) % suggestions.length
-                            e.preventDefault()
-                        } else if (e.key === 'ArrowUp') {
-                            newIndex =
-                                (highlighted - 1 + suggestions.length) %
-                                suggestions.length
-                            e.preventDefault()
-                        } else if (e.key === 'Enter') {
-                            selectSuggestion(index, suggestions[highlighted])
-                            e.preventDefault()
-                            newIndex = 0
-                        }
-
-                        setHighlightedIndex(newIndex)
-                    }}
+                    onChange={(e) => handleInputChange(e.target.value)}
+                    onKeyDown={handleKeyDown}
                     className="w-full border border-gray-200 rounded px-3 py-1"
                 />
 
                 {suggestions.length > 0 && (
                     <ul className="absolute z-10 w-full bg-white border border-gray-300 rounded mt-1 max-h-40 overflow-y-auto shadow-md">
-                        {suggestions.map((sugg: Card, idx: number) => (
+                        {suggestions.map((sugg, idx) => (
                             <li
                                 key={sugg.id}
                                 onClick={() => selectSuggestion(index, sugg)}

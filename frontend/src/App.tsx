@@ -257,13 +257,6 @@ function Step1({ expanded, toggle, deckProps }: any) {
     const { deck, setDeck, deckSize, setDeckSize, parseDeck, clearDeck } =
         deckProps
 
-    const [activeSuggestions, setActiveSuggestions] = useState<
-        Record<number, Card[]>
-    >({})
-    const [highlightedIndex, setHighlightedIndex] = useState<
-        Record<number, number>
-    >({})
-
     const updateRow = (
         index: number,
         field: 'input' | 'count',
@@ -276,17 +269,6 @@ function Step1({ expanded, toggle, deckProps }: any) {
         } else {
             updated[index].input = value
             updated[index].card = null
-
-            const matches = value
-                ? cardDatabase
-                      .filter((c) =>
-                          c.name.toLowerCase().includes(value.toLowerCase()),
-                      )
-                      .slice(0, 5)
-                : []
-
-            setActiveSuggestions((prev) => ({ ...prev, [index]: matches }))
-            setHighlightedIndex((prev) => ({ ...prev, [index]: 0 }))
         }
 
         setDeck(updated)
@@ -296,11 +278,7 @@ function Step1({ expanded, toggle, deckProps }: any) {
         const updated = [...deck]
         updated[index].card = card
         updated[index].input = card.name
-
         setDeck(updated)
-
-        setActiveSuggestions((prev) => ({ ...prev, [index]: [] }))
-        setHighlightedIndex((prev) => ({ ...prev, [index]: 0 }))
     }
 
     const addRow = () => setDeck([...deck, { card: null, count: 1, input: '' }])
@@ -370,17 +348,9 @@ function Step1({ expanded, toggle, deckProps }: any) {
                         key={i}
                         row={row}
                         index={i}
-                        suggestions={activeSuggestions[i] || []}
-                        highlighted={highlightedIndex[i] ?? 0}
                         updateRow={updateRow}
                         selectSuggestion={selectSuggestion}
                         removeRow={removeRow}
-                        setHighlightedIndex={(index: number) =>
-                            setHighlightedIndex((prev: any) => ({
-                                ...prev,
-                                [i]: index,
-                            }))
-                        }
                     />
                 ))}
 
