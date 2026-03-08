@@ -35,6 +35,8 @@ def lambda_handler(event, context):
     ideal_hands = event["ideal_hands"]
     num_hands = 1_000_000   # fixed for now
 
+    logger.info(f"Job {job_id} started.")
+
     try:
         result = simple_consistency(
             deckcount=deckcount,
@@ -48,6 +50,8 @@ def lambda_handler(event, context):
         logger.info(f"Job {job_id} failed: {e}")
         result = None
         status = "failed"
+    
+    logger.info(f"Writing result...")
 
     expression_attr_names = {"#s": "status"}
     expression_attr_values = {":status": {"S": status}}
