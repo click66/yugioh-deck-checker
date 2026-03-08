@@ -664,6 +664,7 @@ function Step3({ expanded, toggle, analysisProps, children }: any) {
 
             {p5 !== null && p6 !== null && (
                 <>
+                    <hr className="w-[70%] border-t border-gray-300 mx-auto my-6"></hr>
                     <p className="text-center">
                         Analysis complete; the probabilities of opening one of
                         your ideal hands are:
