@@ -36,6 +36,12 @@ export function DeckRow({
         setHighlighted(0)
     }
 
+    const handleSuggestionClick = (card: Card) => {
+        selectSuggestion(index, card)
+        setSuggestions([])
+        setHighlighted(0)
+    }
+
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (!suggestions.length) return
 
@@ -49,8 +55,7 @@ export function DeckRow({
                 (highlighted - 1 + suggestions.length) % suggestions.length
             e.preventDefault()
         } else if (e.key === 'Enter') {
-            selectSuggestion(index, suggestions[highlighted])
-            setSuggestions([])
+            handleSuggestionClick(suggestions[highlighted])
             e.preventDefault()
             newIndex = 0
         }
@@ -84,7 +89,7 @@ export function DeckRow({
                         {suggestions.map((sugg, idx) => (
                             <li
                                 key={sugg.id}
-                                onClick={() => selectSuggestion(index, sugg)}
+                                onClick={() => handleSuggestionClick(sugg)}
                                 className={`px-3 py-1 cursor-pointer ${
                                     idx === highlighted
                                         ? 'bg-blue-200'
