@@ -68,19 +68,9 @@ def hand_is_wild(
         # Now check wildcards
         for card, count in pat_counter.items():
             if isinstance(card, str) and card.startswith("any_"):
-                logger.info(
-                    'Detected wildcard %s in pattern %s for hand %s',
-                    card,
-                    pat_counter,
-                    hand
-                )
                 type_name = card[4:]
-                # Count cards of this type in hand (excluding exact matches already subtracted)
-                
-                hand_types = [card_database.get(int(c), {}).get("frameType") == type_name for c in 
-                hand]
-                logger.info('Determined hand card types %s', hand_types)
 
+                # Count cards of this type in hand (excluding exact matches already subtracted)
                 type_count = sum(
                     1
                     for c in hand

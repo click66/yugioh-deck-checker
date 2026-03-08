@@ -40,6 +40,49 @@ def test_wildcard_string_any_spell():
     assert hand_is_wild(hand2, ideal_hands, card_database) is False
 
 
+def test_wildcard_does_not_consider_specifics():
+    hand = [80181649, 86988864]  # "A Case for K9" + "3-Hump Lacooda"
+    ideal_hands = [[80181649, "any_spell"]]  # "A Case for K9" + any spell
+
+    assert hand_is_wild(hand, ideal_hands, card_database) is False
+
+
+def test_wildcard_considers_duplicates():
+    hand = [80181649, 80181649, 86988864]  # "A Case for K9" + "3-Hump Lacooda"
+    ideal_hands = [[80181649, "any_spell"]]  # "A Case for K9" + any spell
+
+    assert hand_is_wild(hand, ideal_hands, card_database) is True
+
+
+def test_multiple_wildcards():
+    # 80181649 = "A Case for K9" (spell)
+    # 6850209  = "A Deal with Dark Ruler" (spell)
+    hand = [80181649, 80181649, 6850209]
+
+    # Ideal hand contains multiple wildcards
+    ideal_hands = [[80181649, "any_spell", "any_spell"]]
+
+    assert hand_is_wild(hand, ideal_hands, card_database) is True
+
+
+def test_multiple_wildcards_larger_hand():
+    # 80181649 = "A Case for K9" (spell)
+    # 6850209  = "A Deal with Dark Ruler" (spell)
+    hand = [80181649,  6850209]
+
+    # Ideal hand contains multiple wildcards
+    ideal_hands = [[80181649, "any_spell", "any_spell"]]
+
+    assert hand_is_wild(hand, ideal_hands, card_database) is False
+
+
+def test_multiple_wildcards_larger_hand_duplicates():
+    hand = [80181649, 80181649]  # two copies of "A Case for K9", both spells
+    ideal_hands = [[80181649, "any_spell", "any_spell"]]
+
+    assert hand_is_wild(hand, ideal_hands, card_database) is False
+
+
 def test_duplicates_in_hand():
     hand = [80181649, 80181649, 86988864]
     ideal_hands = [[80181649, 80181649]]
