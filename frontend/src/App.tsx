@@ -238,13 +238,7 @@ export default function App() {
                     <Step3
                         expanded={expandedSteps[3]}
                         toggle={() => toggleStep(3)}
-                        analysisProps={{
-                            hands,
-                            job,
-                            loading,
-                            loadingMessage,
-                            runAnalysis,
-                        }}
+                        analysisProps={analysisProps}
                     >
                         <div className="flex items-center mt-4">
                             <input
