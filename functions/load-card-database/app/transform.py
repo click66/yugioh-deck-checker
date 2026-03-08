@@ -9,11 +9,15 @@ def transform_cards(cards):
         })
 
         fields = ["id", "frameType", "name", "race", "archetype", "attribute"]
+        obj = {f: card[f] for f in fields if f in card}
 
-        obj = {}
-        for f in fields:
-            if f in card:
-                obj[f] = card[f]
+        frame_type = card.get("frameType", "").lower()
+        if frame_type == "spell":
+            obj["superType"] = "spell"
+        elif frame_type == "trap":
+            obj["superType"] = "trap"
+        else:
+            obj["superType"] = "monster"
 
         detailed.append(obj)
 

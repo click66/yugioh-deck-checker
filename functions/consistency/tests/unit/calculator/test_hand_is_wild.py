@@ -2,18 +2,18 @@ from app.calculator.calculator import hand_is_wild
 
 # Minimal mock card database keyed by card ID
 card_database = {
-    80181649: {"frameType": "spell", "attribute": None, "race": None, "name": "A Case for K9"},
-    86988864: {"frameType": "effect", "attribute": None, "race": "Beast", "name": "3-Hump Lacooda"},
-    14261867: {"frameType": "effect", "attribute": "DARK", "race": "Insect", "name": "8-Claws Scorpion"},
-    23771716: {"frameType": "normal", "attribute": "WATER", "race": "Fish", "name": "7 Colored Fish"},
-    6850209: {"frameType": "spell", "attribute": "DARK", "race": "Quick-Play", "name": "A Deal with Dark Ruler"},
-    68170903: {"frameType": "trap", "attribute": None, "race": None, "name": "A Feint Plan"},
+    80181649: {"superType": "spell", "attribute": None, "race": None, "name": "A Case for K9"},
+    86988864: {"superType": "monster", "attribute": None, "race": "Beast", "name": "3-Hump Lacooda"},
+    14261867: {"superType": "monster", "attribute": "DARK", "race": "Insect", "name": "8-Claws Scorpion"},
+    23771716: {"superType": "normal", "attribute": "WATER", "race": "Fish", "name": "7 Colored Fish"},
+    6850209: {"superType": "spell", "attribute": "DARK", "race": "Quick-Play", "name": "A Deal with Dark Ruler"},
+    68170903: {"superType": "trap", "attribute": None, "race": None, "name": "A Feint Plan"},
 }
 
 # Wildcard definitions for IDs
 wildcard_lookup = {
-    "any_spell": lambda card_id: card_database[card_id]["frameType"] == "spell",
-    "any_trap": lambda card_id: card_database[card_id]["frameType"] == "trap",
+    "any_spell": lambda card_id: card_database[card_id]["superType"] == "spell",
+    "any_trap": lambda card_id: card_database[card_id]["superType"] == "trap",
     "any_dark": lambda card_id: card_database[card_id].get("attribute") == "DARK",
 }
 

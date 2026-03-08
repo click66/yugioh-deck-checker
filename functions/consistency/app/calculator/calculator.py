@@ -60,8 +60,8 @@ def hand_is_wild(
                     # exact card missing -> pattern cannot match
                     return False
                 # Decrement remaining count of this card type for potential wildcard
-                remaining_types.setdefault(card_info["frameType"], 0)
-                remaining_types[card_info["frameType"]] -= count
+                remaining_types.setdefault(card_info["superType"], 0)
+                remaining_types[card_info["superType"]] -= count
                 if hand_counter[card] < count:
                     return False
 
@@ -74,14 +74,14 @@ def hand_is_wild(
                 # type_count = sum(
                 #     1
                 #     for c in hand
-                #     if card_database.get(int(c), {}).get("frameType") == type_name
+                #     if card_database.get(int(c), {}).get("superType") == type_name
                 # )
 
                         # Count cards of this type in hand (excluding exact matches already subtracted)
                 type_count = 0
                 for c in hand:
                     card_data = card_database.get(int(c))
-                    frame_type = card_data.get("frameType") if card_data else None
+                    frame_type = card_data.get("superType") if card_data else None
 
                     # Log the card in hand and its data
                     logger.info(
