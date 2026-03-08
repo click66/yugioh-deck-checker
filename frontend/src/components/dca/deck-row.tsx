@@ -1,10 +1,10 @@
 import { useState } from 'react'
-import { useCardDatabase } from '../../hooks/useCardDatabase'
 import type { Card, DeckLine } from '../../types/deck'
 
 type DeckRowProps = {
     row: DeckLine
     index: number
+    cardDatabase: Card[]
     updateRow: (index: number, field: 'input' | 'count', value: string) => void
     selectSuggestion: (index: number, card: Card) => void
     removeRow: (index: number) => void
@@ -13,11 +13,11 @@ type DeckRowProps = {
 export function DeckRow({
     row,
     index,
+    cardDatabase,
     updateRow,
     selectSuggestion,
     removeRow,
 }: DeckRowProps) {
-    const { cards: cardDatabase } = useCardDatabase()
     const [suggestions, setSuggestions] = useState<Card[]>([])
     const [highlighted, setHighlighted] = useState(0)
 

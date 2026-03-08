@@ -235,6 +235,7 @@ export default function App() {
                         expanded={expandedSteps[2]}
                         toggle={() => toggleStep(2)}
                         handProps={handProps}
+                        setExpandedSteps={setExpandedSteps}
                     />
                     <Step3
                         expanded={expandedSteps[3]}
@@ -390,6 +391,7 @@ function Step1({ expanded, toggle, deckProps }: any) {
                         updateRow={updateRow}
                         selectSuggestion={selectSuggestion}
                         removeRow={removeRow}
+                        cardDatabase={cardDatabase}
                     />
                 ))}
 
@@ -430,7 +432,7 @@ function Step1({ expanded, toggle, deckProps }: any) {
     )
 }
 
-function Step2({ expanded, toggle, handProps }: any) {
+function Step2({ expanded, toggle, handProps, setExpandedSteps }: any) {
     const {
         hands,
         setHands,
@@ -441,7 +443,23 @@ function Step2({ expanded, toggle, handProps }: any) {
         addHand,
         deck,
     } = handProps
-    const selectableDeck = deck.filter((d: DeckLine) => d.card !== null)
+
+    const selectableDeck = deck
+        .filter((d: DeckLine) => d.card !== null)
+        .sort((a: DeckLine, b: DeckLine) =>
+            a.card!.name.localeCompare(b.card!.name),
+        )
+
+    const blankMessage = hands.length === 0 && (
+        <div className="text-gray-500 text-sm mb-2">
+            No ideal hands defined yet.
+        </div>
+    )
+
+    const goNext = () => {
+        toggle()
+        setExpandedSteps((prev: any) => ({ ...prev, 3: true })) // open step 3
+    }
 
     return (
         <Panel
@@ -449,26 +467,15 @@ function Step2({ expanded, toggle, handProps }: any) {
             expanded={expanded}
             toggle={toggle}
         >
-            <button
-                onClick={() => setShowHandModal(true)}
-                className="mb-4 px-4 py-2 bg-green-500 text-white rounded "
-            >
-                Add Ideal Hand
-            </button>
+            {blankMessage}
 
-            {hands.length === 0 && (
-                <div className="text-gray-500 text-sm">
-                    No ideal hands defined yet.
-                </div>
-            )}
-
-            <div className="space-y-2">
+            <div className="space-y-2 mb-4">
                 {hands.map((hand: (Card | Wildcard)[], i: number) => (
                     <div
                         key={i}
                         className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 flex flex-wrap items-center justify-between gap-2"
                     >
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap gap-2 min-h-[3rem]">
                             {hand.map((c, idx) => {
                                 const isWildcard = (c as Wildcard).wildcard
                                 return (
@@ -501,6 +508,22 @@ function Step2({ expanded, toggle, handProps }: any) {
                 ))}
             </div>
 
+            <div className="flex gap-3 pt-3 items-center">
+                <button
+                    onClick={() => setShowHandModal(true)}
+                    className="px-4 py-2 bg-green-500 text-white rounded"
+                >
+                    Add Ideal Hand
+                </button>
+                <button
+                    onClick={goNext}
+                    disabled={hands.length === 0}
+                    className="px-5 py-2 bg-blue-500 text-white rounded disabled:opacity-50"
+                >
+                    Next
+                </button>
+            </div>
+
             {showHandModal && (
                 <div
                     className="fixed inset-0 bg-black/30 flex items-center justify-center p-4"
@@ -514,38 +537,38 @@ function Step2({ expanded, toggle, handProps }: any) {
                             Select Cards
                         </h3>
 
-                        {newHand.length > 0 && (
-                            <div className="flex flex-wrap gap-2 mb-2">
-                                {newHand.map(
-                                    (card: Card | Wildcard, idx: number) => (
-                                        <div
-                                            key={idx}
-                                            className="flex items-center gap-1 px-2 py-1 bg-gray-100 rounded shadow-sm text-sm"
+                        <div className="flex flex-wrap gap-2 mb-2 min-h-[3rem]">
+                            {newHand.map(
+                                (card: Card | Wildcard, idx: number) => (
+                                    <div
+                                        key={idx}
+                                        className="flex items-center gap-1 px-2 py-1 bg-gray-100 rounded shadow-sm text-sm"
+                                    >
+                                        {card.name} (
+                                        {
+                                            newHand.filter(
+                                                (c: Card) => c === card,
+                                            ).length
+                                        }
+                                        )
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                setNewHand([
+                                                    ...newHand.slice(0, idx),
+                                                    ...newHand.slice(idx + 1),
+                                                ])
+                                            }
+                                            className="text-red-500 hover:text-red-700"
                                         >
-                                            {card.name}
-                                            <button
-                                                type="button"
-                                                onClick={() =>
-                                                    setNewHand([
-                                                        ...newHand.slice(
-                                                            0,
-                                                            idx,
-                                                        ),
-                                                        ...newHand.slice(
-                                                            idx + 1,
-                                                        ),
-                                                    ])
-                                                }
-                                                className="text-red-500 hover:text-red-700"
-                                            >
-                                                ×
-                                            </button>
-                                        </div>
-                                    ),
-                                )}
-                            </div>
-                        )}
+                                            ×
+                                        </button>
+                                    </div>
+                                ),
+                            )}
+                        </div>
 
+                        {/* Wildcards */}
                         <div className="mb-4">
                             <div className="text-sm text-gray-600 mb-1 font-medium">
                                 Wildcards
@@ -572,7 +595,6 @@ function Step2({ expanded, toggle, handProps }: any) {
                             </div>
                         </div>
 
-                        {/* Deck cards */}
                         <div className="mb-4">
                             <div className="text-sm text-gray-600 mb-1 font-medium">
                                 Deck Cards
@@ -599,7 +621,6 @@ function Step2({ expanded, toggle, handProps }: any) {
                             </div>
                         </div>
 
-                        {/* Actions */}
                         <div className="flex justify-end gap-3 mt-2">
                             <button
                                 onClick={() => setShowHandModal(false)}
@@ -666,8 +687,8 @@ function Step3({ expanded, toggle, analysisProps, children }: any) {
                 <>
                     <hr className="w-[70%] border-t border-gray-300 mx-auto my-6"></hr>
                     <p className="text-center">
-                        Analysis complete; the probabilities of opening one of
-                        your ideal hands are:
+                        Analysis complete; in 1 million hands, the percentage we
+                        saw one of your ideal hands was:
                     </p>
                     <div className="mt-4 flex flex-col sm:flex-row gap-4">
                         <div className="flex-1 p-4 border rounded-lg bg-white shadow text-center">
