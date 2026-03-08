@@ -21,57 +21,45 @@ wildcard_lookup = {
 def test_exact_match():
     hand = [80181649, 86988864]
     ideal_hands = [[80181649, 86988864]]
-    assert hand_is_wild(hand, ideal_hands, wildcard_lookup) is True
+    assert hand_is_wild(hand, ideal_hands, card_database) is True
 
 
 def test_no_match():
     hand = [80181649, 86988864]
     ideal_hands = [[80181649, 14261867]]
-    assert hand_is_wild(hand, ideal_hands, wildcard_lookup) is False
+    assert hand_is_wild(hand, ideal_hands, card_database) is False
 
 
 def test_wildcard_string_any_spell():
     hand = [80181649, 86988864]  # "3-Hump Lacooda" + "A Case for K9"
     ideal_hands = [[86988864, "any_spell"]]
 
-    assert hand_is_wild(hand, ideal_hands, wildcard_lookup) is True
+    assert hand_is_wild(hand, ideal_hands, card_database) is True
 
     hand2 = [86988864, 68170903]  # "3-Hump Lacooda" + "A Feint Plan"
-    assert hand_is_wild(hand2, ideal_hands, wildcard_lookup) is False
-
-
-def test_callable_predicate_any_dark():
-    def is_dark(card_id): return card_database[card_id].get(
-        "attribute") == "DARK"
-
-    hand = [6850209, 86988864]  # spell DARK + effect
-    ideal_hands = [[is_dark, 86988864]]  # DARK + specific card
-    assert hand_is_wild(hand, ideal_hands, wildcard_lookup) is True
-
-    hand2 = [86988864, 23771716]  # no DARK
-    assert hand_is_wild(hand2, ideal_hands, wildcard_lookup) is False
+    assert hand_is_wild(hand2, ideal_hands, card_database) is False
 
 
 def test_duplicates_in_hand():
     hand = [80181649, 80181649, 86988864]
     ideal_hands = [[80181649, 80181649]]
-    assert hand_is_wild(hand, ideal_hands, wildcard_lookup) is True
+    assert hand_is_wild(hand, ideal_hands, card_database) is True
 
     ideal_hands2 = [[80181649, 80181649, 80181649]]
-    assert hand_is_wild(hand, ideal_hands2, wildcard_lookup) is False
+    assert hand_is_wild(hand, ideal_hands2, card_database) is False
 
 
 def test_multiple_ideal_patterns():
     hand = [86988864, 6850209]
     ideal_hands = [[86988864, 80181649], [86988864, "any_spell"]]
-    assert hand_is_wild(hand, ideal_hands, wildcard_lookup) is True
+    assert hand_is_wild(hand, ideal_hands, card_database) is True
 
 
 def test_empty_hand_or_empty_ideal():
     hand = []
     ideal_hands = [[]]
-    assert hand_is_wild(hand, ideal_hands, wildcard_lookup) is True
+    assert hand_is_wild(hand, ideal_hands, card_database) is True
 
     hand2 = [80181649]
     ideal_hands2 = []
-    assert hand_is_wild(hand2, ideal_hands2, wildcard_lookup) is False
+    assert hand_is_wild(hand2, ideal_hands2, card_database) is False

@@ -46,7 +46,7 @@ def lambda_handler(event, context):
     names = event["names"]
     ratios = event["ratios"]
     ideal_hands = event["ideal_hands"]
-    num_hands = 1_000_000  # fixed for now
+    num_hands = 10  # fixed for now # Temporarily switch to 10 test hands only
 
     # Feature toggle: whether to use hand_is_wild
     use_wildcards = event.get("use_wildcards", False)
@@ -58,7 +58,7 @@ def lambda_handler(event, context):
             def hand_checker(hand, ideal_counters): return hand_is_wild(
                 hand,
                 ideal_counters,
-                wildcard_lookup,
+                card_database,
             )
         else:
             hand_checker = hand_is_good
