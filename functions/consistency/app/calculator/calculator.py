@@ -95,6 +95,70 @@ def hand_is_wild(
     return any(match_pattern(pattern) for pattern in ideal_hands)
 
 
+def run_test_hand_with_gambling(
+    hand: Sequence[str],
+    ideal_hands: Sequence[Union[Sequence[str], Counter]],
+    card_database: dict,
+    deck: dict,
+    gambling_cards: dict,
+) -> bool:
+    matches_without = hand_is_wild(hand, ideal_hands, card_database)
+    matches_with = matches_without
+
+    if matches_without:
+        return matches_without, matches_with
+
+    # Try to use gamble only if it can be used "safely"
+    gamble_card = next((c for c in hand if c in gambling_cards), None)
+    if gamble_card is None:
+        return matches_without, matches_with
+
+    spec = gambling_cards[gamble_card]
+    discard_requirements = spec.get("discard", [])
+
+    # Need at least 1 discardable card already in hand to avoid punting the whole hand
+    discardable = [
+        c for c in hand
+        for field, value in discard_requirements
+        if card_database.get(int(c), {}).get(field) == value
+    ]
+    if not discardable:
+        return matches_without, matches_with
+
+    # Simulate resolving exactly ONE gamble
+
+    # Remaining deck - full deck minus the 5 cards we drew
+    remaining_deck = deck.copy()
+    for card in hand:
+        remaining_deck.remove(card)
+
+    # Remove one copy of gamble from hand (we're activating it)
+    new_hand = list(hand)
+    new_hand.remove(gamble_card)  # activate the gamble
+
+    # Draw cards
+    num_to_draw = min(spec.get("draw", 0), len(remaining_deck))
+    drawn_cards = random.sample(remaining_deck, num_to_draw)
+    new_hand.extend(drawn_cards)
+
+    # Remove one discardable card (first match)
+    for c in new_hand:
+        for field, value in discard_requirements:
+            info = card_database.get(int(c))
+            if info and info.get(field) == value:
+                new_hand.remove(c)
+                break
+        else:
+            continue
+        break
+
+    # Recheck post-gamble hand
+    if hand_is_wild(new_hand, ideal_hands, card_database):
+        matches_with = True
+
+    return matches_without, matches_with
+
+
 def simple_consistency(
     deckcount: int,
     ratios: Sequence[int],
