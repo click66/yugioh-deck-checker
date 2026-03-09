@@ -2,19 +2,12 @@ from app.calculator.calculator import hand_is_wild
 
 # Minimal mock card database keyed by card ID
 card_database = {
-    80181649: {"superType": "spell", "attribute": None, "race": None, "name": "A Case for K9"},
-    86988864: {"superType": "monster", "attribute": None, "race": "Beast", "name": "3-Hump Lacooda"},
+    80181649: {"superType": "spell", "name": "A Case for K9"},
+    86988864: {"superType": "monster", "race": "Beast", "name": "3-Hump Lacooda"},
     14261867: {"superType": "monster", "attribute": "DARK", "race": "Insect", "name": "8-Claws Scorpion"},
     23771716: {"superType": "normal", "attribute": "WATER", "race": "Fish", "name": "7 Colored Fish"},
     6850209: {"superType": "spell", "attribute": "DARK", "race": "Quick-Play", "name": "A Deal with Dark Ruler"},
-    68170903: {"superType": "trap", "attribute": None, "race": None, "name": "A Feint Plan"},
-}
-
-# Wildcard definitions for IDs
-wildcard_lookup = {
-    "any_spell": lambda card_id: card_database[card_id]["superType"] == "spell",
-    "any_trap": lambda card_id: card_database[card_id]["superType"] == "trap",
-    "any_dark": lambda card_id: card_database[card_id].get("attribute") == "DARK",
+    68170903: {"superType": "trap", "name": "A Feint Plan"},
 }
 
 
@@ -30,9 +23,9 @@ def test_no_match():
     assert hand_is_wild(hand, ideal_hands, card_database) is False
 
 
-def test_wildcard_string_any_spell():
+def test_wildcard_string_any_superType_spell():
     hand = [80181649, 86988864]  # "3-Hump Lacooda" + "A Case for K9"
-    ideal_hands = [[86988864, "any_spell"]]
+    ideal_hands = [[86988864, "any_superType_spell"]]
 
     assert hand_is_wild(hand, ideal_hands, card_database) is True
 
@@ -42,14 +35,16 @@ def test_wildcard_string_any_spell():
 
 def test_wildcard_does_not_consider_specifics():
     hand = [80181649, 86988864]  # "A Case for K9" + "3-Hump Lacooda"
-    ideal_hands = [[80181649, "any_spell"]]  # "A Case for K9" + any spell
+    # "A Case for K9" + any spell
+    ideal_hands = [[80181649, "any_superType_spell"]]
 
     assert hand_is_wild(hand, ideal_hands, card_database) is False
 
 
 def test_wildcard_considers_duplicates():
     hand = [80181649, 80181649, 86988864]  # "A Case for K9" + "3-Hump Lacooda"
-    ideal_hands = [[80181649, "any_spell"]]  # "A Case for K9" + any spell
+    # "A Case for K9" + any spell
+    ideal_hands = [[80181649, "any_superType_spell"]]
 
     assert hand_is_wild(hand, ideal_hands, card_database) is True
 
@@ -60,7 +55,7 @@ def test_multiple_wildcards():
     hand = [80181649, 80181649, 6850209]
 
     # Ideal hand contains multiple wildcards
-    ideal_hands = [[80181649, "any_spell", "any_spell"]]
+    ideal_hands = [[80181649, "any_superType_spell", "any_superType_spell"]]
 
     assert hand_is_wild(hand, ideal_hands, card_database) is True
 
@@ -71,14 +66,14 @@ def test_multiple_wildcards_larger_hand():
     hand = [80181649,  6850209]
 
     # Ideal hand contains multiple wildcards
-    ideal_hands = [[80181649, "any_spell", "any_spell"]]
+    ideal_hands = [[80181649, "any_superType_spell", "any_superType_spell"]]
 
     assert hand_is_wild(hand, ideal_hands, card_database) is False
 
 
 def test_multiple_wildcards_larger_hand_duplicates():
     hand = [80181649, 80181649]  # two copies of "A Case for K9", both spells
-    ideal_hands = [[80181649, "any_spell", "any_spell"]]
+    ideal_hands = [[80181649, "any_superType_spell", "any_superType_spell"]]
 
     assert hand_is_wild(hand, ideal_hands, card_database) is False
 
@@ -94,7 +89,7 @@ def test_duplicates_in_hand():
 
 def test_multiple_ideal_patterns():
     hand = [86988864, 6850209]
-    ideal_hands = [[86988864, 80181649], [86988864, "any_spell"]]
+    ideal_hands = [[86988864, 80181649], [86988864, "any_superType_spell"]]
     assert hand_is_wild(hand, ideal_hands, card_database) is True
 
 

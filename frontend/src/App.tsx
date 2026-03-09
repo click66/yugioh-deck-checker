@@ -23,9 +23,9 @@ const loadingMessages = [
 ]
 
 const wildcardOptions: Wildcard[] = [
-    { id: 'any_monster', name: 'Any Monster', wildcard: true },
-    { id: 'any_spell', name: 'Any Spell', wildcard: true },
-    { id: 'any_trap', name: 'Any Trap', wildcard: true },
+    { id: 'any_superType_monster', name: 'Any Monster', wildcard: true },
+    { id: 'any_superType_spell', name: 'Any Spell', wildcard: true },
+    { id: 'any_superType_trap', name: 'Any Trap', wildcard: true },
 ]
 
 const DECK_STORAGE_KEY = 'deck'

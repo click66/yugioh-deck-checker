@@ -40,63 +40,54 @@ def hand_is_wild(
 ) -> bool:
     """
     Return True if the hand matches any of the ideal hands.
-    Supports wildcards like "any_spell".
+    Supports wildcards like:
+        any_superType_monster
+        any_attribute_dark
+        any_race_quick-play
     Accepts ideal_hands as list of lists (for tests) or list of Counters (optimized).
     """
+
     hand_counter = Counter(hand)
+
+    # Precompute attribute counts for the hand (all fields)
+    attr_counter = Counter()
+    for c in hand:
+        info = card_database.get(int(c))
+        if info:
+            for field, value in info.items():
+                if value is not None:
+                    attr_counter[(field, value)] += 1
 
     def match_pattern(pattern: Union[Sequence[Union[int, str]], Counter]) -> bool:
         pat_counter = pattern if isinstance(
             pattern, Counter) else Counter(pattern)
 
-        # Track remaining wildcard counts
-        remaining_types = {}
+        remaining_attrs = Counter()
 
-        # First subtract exact cards from hand_counter
+        # First check exact cards
         for card, count in pat_counter.items():
             if not (isinstance(card, str) and card.startswith("any_")):
                 card_info = card_database.get(int(card))
                 if card_info is None:
-                    # exact card missing -> pattern cannot match
                     return False
-                # Decrement remaining count of this card type for potential wildcard
-                remaining_types.setdefault(card_info["superType"], 0)
-                remaining_types[card_info["superType"]] -= count
+
                 if hand_counter[card] < count:
                     return False
+
+                for field, value in card_info.items():
+                    if value is not None:
+                        remaining_attrs[(field, value)] -= count
 
         # Now check wildcards
         for card, count in pat_counter.items():
             if isinstance(card, str) and card.startswith("any_"):
-                type_name = card[4:]
+                # Wildcard format: any_<field>_<value>
+                _, field, value = card.split("_", 2)
 
-                # Count cards of this type in hand (excluding exact matches already subtracted)
-                type_count = sum(
-                    1
-                    for c in hand
-                    if card_database.get(int(c), {}).get("superType") == type_name
-                )
+                available = attr_counter.get(
+                    (field, value), 0) + remaining_attrs.get((field, value), 0)
 
-                        # Count cards of this type in hand (excluding exact matches already subtracted)
-                # type_count = 0
-                # for c in hand:
-                #     card_data = card_database.get(int(c))
-                #     frame_type = card_data.get("superType") if card_data else None
-
-                #     # Log the card in hand and its data
-                #     logger.info(
-                #         "Checking card %s in hand %s, data: %s",
-                #         c,
-                #         hand,
-                #         card_data if card_data else "Unresolved"
-                #     )
-
-                #     if frame_type == type_name:
-                #         type_count += 1
-
-                # subtract exact cards
-                type_count += remaining_types.get(type_name, 0)
-                if type_count < count:
+                if available < count:
                     return False
 
         return True
