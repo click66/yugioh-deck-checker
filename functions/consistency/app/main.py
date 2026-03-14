@@ -29,6 +29,10 @@ GAMBLING_CARDS = {
         "draw": 1,
         "discard": [],
     },
+    20508881: {  # Radiant Typhoon Vision
+        "draw": 2,
+        "discard": [("race", "Quick-Play")],
+    },
 }
 
 
@@ -74,7 +78,7 @@ def lambda_handler(event, context):
 
     try:
         # Always use run_test_hand_with_gambling for consistency checks
-        def hand_checker(remaining_deck, hand, ideal_counters):
+        def hand_tester(remaining_deck, hand, ideal_counters):
             return run_test_hand_with_gambling(
                 hand_checker=hand_is_wild,
                 hand=hand,
@@ -94,7 +98,7 @@ def lambda_handler(event, context):
             names=names,
             ideal_hands=ideal_hands,
             num_hands=num_hands,
-            hand_checker=hand_checker,
+            hand_tester=hand_tester,
         )
         status = "completed"
     except Exception as e:

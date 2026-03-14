@@ -1,10 +1,10 @@
 import logging
 import random
 from collections import Counter
-from typing import List, Sequence, TypeAlias, TypedDict, Union, NotRequired
+from typing import Callable, List, Sequence, TypeAlias, TypedDict, Union, NotRequired
 
 from app.calculator.exceptions import InvalidCardCountsError
-from app.calculator.result import ConsistencyResult
+from app.calculator.result import ConsistencyResult, HandTestResult
 
 logger = logging.getLogger()
 logger.setLevel("INFO")
@@ -35,7 +35,7 @@ GamblingCards: TypeAlias = dict[int, GambleCard]
 
 def hand_is_good(
     hand: Sequence[int],
-    ideal_hands: Sequence[Union[Sequence[int], Counter]]
+    ideal_hands: Sequence[Union[Sequence[int | str], Counter]]
 ) -> bool:
     """
     Return True if the hand matches any of the ideal hands.
@@ -126,6 +126,19 @@ def hand_is_wild(
     return False
 
 
+def run_test_hand_without_gambling(
+    hand_checker: callable,
+    hand: Sequence[int],
+    ideal_hands: Sequence[Union[Sequence[int | str], Counter]],
+    card_database: CardDatabase,
+) -> HandTestResult:
+    result = hand_checker(hand, ideal_hands, card_database)
+    return HandTestResult(
+        matches_without_gambling=result,
+        matches_with_gambling=result,
+    )
+
+
 def run_test_hand_with_gambling(
     hand_checker: callable,
     hand: Sequence[int],
@@ -133,7 +146,7 @@ def run_test_hand_with_gambling(
     card_database: CardDatabase,
     remaining_deck: list[int],
     gambling_cards: GamblingCards,
-) -> tuple[bool, bool]:
+) -> HandTestResult:
     """
     Run hands with gambling enabled, in addition to basic checking.
     If the given test hand is not one of the ideal hands, but contains
@@ -154,16 +167,21 @@ def run_test_hand_with_gambling(
      - Most "useful" gambling cards
      - Number of times gambling cards were seen but the hands did not meet the requirements to play it
     """
+    logger.info("Checking hand: %s", hand)
+
+    # Check without gambling first
     matches_without = hand_checker(hand, ideal_hands, card_database)
     matches_with = matches_without
+    logger.info("Hand %s matches without gambling: %s", hand, matches_without)
 
     if matches_without:
-        return matches_without, matches_with
+        return HandTestResult(matches_without, matches_with)
 
     # Try to use gamble only if it can be used "safely"
     gamble_card = next((c for c in hand if c in gambling_cards), None)
     if gamble_card is None:
-        return matches_without, matches_with
+        logger.info("No gamble card in hand: %s", hand)
+        return HandTestResult(matches_without, matches_with)
 
     spec = gambling_cards[gamble_card]
     discard_requirements = spec.get("discard", [])
@@ -175,21 +193,28 @@ def run_test_hand_with_gambling(
         if card_database.get(c, {}).get(field) == value
     ]
     if not discardable:
-        return matches_without, matches_with
+        logger.info("No discardable cards for gamble %s in hand %s",
+                    gamble_card, hand)
+        return HandTestResult(matches_without, matches_with)
 
     # Simulate resolving exactly ONE gamble
 
     # Remove one copy of gamble from hand (we're activating it)
     new_hand = list(hand)
     new_hand.remove(gamble_card)  # activate the gamble
+    logger.info("Activated gamble card %s, hand now: %s",
+                gamble_card, new_hand)
 
     # Draw cards
     num_to_draw = spec.get("draw", 0)
     if len(remaining_deck) < num_to_draw:   # Cannot Pot of Greed with insufficient deck
-        return matches_without, matches_with
+        logger.info("Not enough cards in deck to draw %d for gamble %s",
+                    num_to_draw, gamble_card)
+        return HandTestResult(matches_without, matches_with)
 
     drawn_cards = random.sample(remaining_deck, num_to_draw)
     new_hand.extend(drawn_cards)
+    logger.info("Drew cards %s, new hand: %s", drawn_cards, new_hand)
 
     # Remove one discardable card (first match)
     for c in new_hand:
@@ -197,6 +222,8 @@ def run_test_hand_with_gambling(
             info = card_database.get(c)
             if info and info.get(field) == value:
                 new_hand.remove(c)
+                logger.info(
+                    "Discarded card %s to satisfy gamble requirement", c)
                 break
         else:
             continue
@@ -205,16 +232,25 @@ def run_test_hand_with_gambling(
     # Recheck post-gamble hand
     if hand_checker(new_hand, ideal_hands, card_database):
         matches_with = True
+        logger.info("Hand %s matches after gambling", new_hand)
+    else:
+        logger.info("Hand %s still does not match after gambling", new_hand)
 
-    return matches_without, matches_with
+    return HandTestResult(matches_without, matches_with)
+
+
+HandTester = Callable[
+    [list[int], Sequence[int], Sequence[Counter]],
+    "HandTestResult"
+]
 
 
 def simple_consistency(
     deckcount: int,
     ratios: Sequence[int],
     names: Sequence[int],
-    ideal_hands: Sequence[Sequence[int]],
-    hand_checker: callable,
+    ideal_hands: Sequence[Sequence[int | str]],
+    hand_tester: HandTester,
     num_hands: int = 1_000_000,
 ) -> ConsistencyResult:
     # Make local copies to avoid mutation of originals
@@ -259,7 +295,7 @@ def simple_consistency(
         for card in hand5:
             remaining_deck.remove(card)
 
-        result5 = hand_checker(remaining_deck, hand5, ideal_counters)
+        result5 = hand_tester(remaining_deck, hand5, ideal_counters)
         logger.info("5-card hand %d: %s -> %s", i + 1, hand5, result5)
         if result5:
             good_5 += 1
@@ -270,7 +306,7 @@ def simple_consistency(
             remaining_deck = deck.copy()
             for card in hand6:
                 remaining_deck.remove(card)
-            result6 = hand_checker(remaining_deck, hand6, ideal_counters)
+            result6 = hand_tester(remaining_deck, hand6, ideal_counters)
             logger.info("6-card hand %d: %s -> %s", i + 1, hand6, result6)
             if result6:
                 good_6 += 1
