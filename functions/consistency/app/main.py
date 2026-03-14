@@ -51,7 +51,7 @@ def lambda_handler(event, context):
     names = event["names"]
     ratios = event["ratios"]
     ideal_hands = event["ideal_hands"]
-    num_hands = 1_000_000  # fixed for now
+    num_hands = 20  # fixed for now
 
     # Feature toggle: whether to use gambling
     use_gambling = event.get("use_gambling", False)

@@ -69,6 +69,7 @@ def hand_is_wild(
     Accepts ideal_hands as list of lists (for tests) or list of Counters (optimized).
     """
     hand_counter = Counter(hand)
+    logger.info("Checking hand: %s", hand)
 
     # Precompute attribute counts for the hand (all fields)
     attr_counter = Counter()
@@ -83,14 +84,18 @@ def hand_is_wild(
         pat_counter = pattern if isinstance(
             pattern, Counter) else Counter(pattern)
         remaining_attrs = Counter()
+        logger.info("Comparing against pattern: %s", pattern)
 
         # First check exact cards
         for card, count in pat_counter.items():
             if isinstance(card, int):
                 card_info = card_database.get(card)
                 if card_info is None:
+                    logger.info("Card ID %d not found in database", card)
                     return False
                 if hand_counter[card] < count:
+                    logger.info("Card ID %d count %d < required %d",
+                                card, hand_counter[card], count)
                     return False
 
                 # Track remaining attributes for wildcard matching
@@ -103,16 +108,25 @@ def hand_is_wild(
             if isinstance(card, str) and card.startswith("any_"):
                 # Wildcard format: any_<field>_<value>
                 _, field, value = card.split("_", 2)
-
                 available = attr_counter.get(
                     (field, value), 0) + remaining_attrs.get((field, value), 0)
-
+                logger.info(
+                    "Wildcard '%s': available %d, required %d", card, available, count
+                )
                 if available < count:
+                    logger.info("Wildcard '%s' failed", card)
                     return False
 
+        logger.info("Pattern matched: %s", pattern)
         return True
 
-    return any(match_pattern(pattern) for pattern in ideal_hands)
+    for pattern in ideal_hands:
+        if match_pattern(pattern):
+            logger.info("Hand %s matches pattern %s", hand, pattern)
+            return True
+
+    logger.info("Hand %s did not match any pattern", hand)
+    return False
 
 
 def run_test_hand_with_gambling(
@@ -206,9 +220,6 @@ def simple_consistency(
     hand_checker: callable,
     num_hands: int = 1_000_000,
 ) -> ConsistencyResult:
-    """
-    Estimate probability that a random 5-card (and 6-card) hand matches an ideal hand.
-    """
     # Make local copies to avoid mutation of originals
     ratios = ratios.copy()
     names = names.copy()
@@ -227,6 +238,8 @@ def simple_consistency(
     ]
     deckcount = len(deck)
 
+    logger.info("Fully computed deck: %s", deck)
+
     # Precompute ideal hand counters for efficiency
     ideal_counters: List[Counter] = [
         Counter(pattern) for pattern in ideal_hands]
@@ -234,14 +247,16 @@ def simple_consistency(
     good_5 = 0
     good_6 = 0
 
-    for _ in range(num_hands):
+    for i in range(num_hands):
         # Draw 5-card hand
         hand5 = random.sample(deck, min(5, deckcount))
         remaining_deck = deck.copy()
         for card in hand5:
             remaining_deck.remove(card)
-        
-        if hand_checker(remaining_deck, hand5, ideal_counters):
+
+        result5 = hand_checker(remaining_deck, hand5, ideal_counters)
+        logger.info("5-card hand %d: %s -> %s", i + 1, hand5, result5)
+        if result5:
             good_5 += 1
 
         # Draw 6-card hand only if deck >= 6
@@ -250,10 +265,15 @@ def simple_consistency(
             remaining_deck = deck.copy()
             for card in hand6:
                 remaining_deck.remove(card)
-            if hand_checker(remaining_deck, hand6, ideal_counters):
+            result6 = hand_checker(remaining_deck, hand6, ideal_counters)
+            logger.info("6-card hand %d: %s -> %s", i + 1, hand6, result6)
+            if result6:
                 good_6 += 1
 
     p5 = good_5 / num_hands
     p6 = good_6 / num_hands if deckcount >= 6 else 0.0
+
+    logger.info("5-card success probability: %.6f", p5)
+    logger.info("6-card success probability: %.6f", p6)
 
     return ConsistencyResult(p5, p6)
