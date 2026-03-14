@@ -58,21 +58,19 @@ def hand_is_good(
 def hand_is_wild(
     hand: Sequence[int],
     ideal_hands: Sequence[Union[Sequence[int | str], Counter]],
-    card_database: CardDatabase
+    card_database: CardDatabase,
 ) -> bool:
     """
     Return True if the hand matches any of the ideal hands.
-    Supports wildcards like:
-        any_superType_monster
-        any_attribute_dark
-        any_race_quick-play
-    Accepts ideal_hands as list of lists (for tests) or list of Counters (optimized).
+    Rules:
+      - Deck contains only ints.
+      - Patterns: exact cards are ints, wildcards are strings starting with "any_".
+    Logging is included to trace hand, pattern, and matching steps.
     """
     hand_counter = Counter(hand)
-    logger.info("Checking hand: %s", hand)
 
-    # Precompute attribute counts for the hand (all fields)
-    attr_counter = Counter()
+    # Precompute attribute counts for the hand
+    attr_counter: Counter = Counter()
     for c in hand:
         info = card_database.get(c)
         if info:
@@ -81,45 +79,44 @@ def hand_is_wild(
                     attr_counter[(field, value)] += 1
 
     def match_pattern(pattern: Union[Sequence[int | str], Counter]) -> bool:
-        pat_counter = pattern if isinstance(
+        # Convert to Counter if needed
+        pat_counter: Counter = pattern if isinstance(
             pattern, Counter) else Counter(pattern)
-        remaining_attrs = Counter()
-        logger.info("Comparing against pattern: %s", pattern)
+        remaining_attrs: Counter = Counter()
 
-        # First check exact cards
-        for card, count in pat_counter.items():
-            if isinstance(card, int):
-                card_info = card_database.get(card)
-                if card_info is None:
-                    logger.info("Card ID %d not found in database", card)
-                    return False
-                if hand_counter[card] < count:
-                    logger.info("Card ID %d count %d < required %d",
-                                card, hand_counter[card], count)
-                    return False
+        logger.info("Comparing hand %s against pattern %s", hand, pat_counter)
 
-                # Track remaining attributes for wildcard matching
-                for field, value in card_info.items():
-                    if value is not None:
-                        remaining_attrs[(field, value)] -= count
-
-        # Now check wildcards
+        # Check each card in the pattern
         for card, count in pat_counter.items():
             if isinstance(card, str) and card.startswith("any_"):
-                # Wildcard format: any_<field>_<value>
+                # wildcard logic
                 _, field, value = card.split("_", 2)
                 available = attr_counter.get(
                     (field, value), 0) + remaining_attrs.get((field, value), 0)
                 logger.info(
-                    "Wildcard '%s': available %d, required %d", card, available, count
-                )
+                    "Checking wildcard %s: need %d, available %d", card, count, available)
                 if available < count:
-                    logger.info("Wildcard '%s' failed", card)
+                    logger.info("Wildcard %s failed", card)
                     return False
+            else:
+                # exact-card logic
+                card_info = card_database.get(card)
+                if card_info is None:
+                    logger.info("Exact card %s not in database", card)
+                    return False
+                if hand_counter.get(card, 0) < count:
+                    logger.info(
+                        "Hand missing %d of exact card %s", count, card)
+                    return False
+                # track remaining attributes for wildcards
+                for field, value in card_info.items():
+                    if value is not None:
+                        remaining_attrs[(field, value)] -= count
 
-        logger.info("Pattern matched: %s", pattern)
+        logger.info("Pattern matched: %s", pat_counter)
         return True
 
+    # Return True if any pattern matches
     for pattern in ideal_hands:
         if match_pattern(pattern):
             logger.info("Hand %s matches pattern %s", hand, pattern)
@@ -234,7 +231,7 @@ def simple_consistency(
 
     # Build deck
     deck: List[int] = [
-        card for name, count in zip(names, ratios) for card in [name] * count
+        int(card) for name, count in zip(names, ratios) for card in [name] * count
     ]
     deckcount = len(deck)
 
