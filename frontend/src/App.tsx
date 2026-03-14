@@ -717,7 +717,7 @@ interface ResultsProps {
 export function Results({ job, cardDatabase }: ResultsProps) {
     if (!job?.result) return null
 
-    const numHands = 1_000
+    const numHands = 1_000_000
 
     const p5 = parseFloat(job.result.p5 || '0')
     const p6 = parseFloat(job.result.p6 || '0')
