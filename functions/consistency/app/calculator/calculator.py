@@ -3,7 +3,7 @@ import random
 from collections import Counter
 from typing import List, Sequence, TypeAlias, TypedDict, Union, NotRequired
 
-from app.calculator.exceptions import InsufficientDeckSizeError, InvalidCardCountsError
+from app.calculator.exceptions import InvalidCardCountsError
 from app.calculator.result import ConsistencyResult
 
 logger = logging.getLogger()
@@ -116,6 +116,7 @@ def hand_is_wild(
 
 
 def run_test_hand_with_gambling(
+    hand_checker: callable,
     hand: Sequence[int],
     ideal_hands: Sequence[Union[Sequence[int | str], Counter]],
     card_database: CardDatabase,
@@ -142,7 +143,7 @@ def run_test_hand_with_gambling(
      - Most "useful" gambling cards
      - Number of times gambling cards were seen but the hands did not meet the requirements to play it
     """
-    matches_without = hand_is_wild(hand, ideal_hands, card_database)
+    matches_without = hand_checker(hand, ideal_hands, card_database)
     matches_with = matches_without
 
     if matches_without:
@@ -191,7 +192,7 @@ def run_test_hand_with_gambling(
         break
 
     # Recheck post-gamble hand
-    if hand_is_wild(new_hand, ideal_hands, card_database):
+    if hand_checker(new_hand, ideal_hands, card_database):
         matches_with = True
 
     return matches_without, matches_with
@@ -236,13 +237,20 @@ def simple_consistency(
     for _ in range(num_hands):
         # Draw 5-card hand
         hand5 = random.sample(deck, min(5, deckcount))
-        if hand_checker(hand5, ideal_counters):
+        remaining_deck = deck.copy()
+        for card in hand5:
+            remaining_deck.remove(card)
+        
+        if hand_checker(remaining_deck, hand5, ideal_counters):
             good_5 += 1
 
         # Draw 6-card hand only if deck >= 6
         if deckcount >= 6:
             hand6 = random.sample(deck, 6)
-            if hand_checker(hand6, ideal_counters):
+            remaining_deck = deck.copy()
+            for card in hand6:
+                remaining_deck.remove(card)
+            if hand_checker(remaining_deck, hand6, ideal_counters):
                 good_6 += 1
 
     p5 = good_5 / num_hands

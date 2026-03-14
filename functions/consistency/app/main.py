@@ -2,7 +2,12 @@ import os
 import boto3
 import logging
 import json
-from app.calculator.calculator import hand_is_good, hand_is_wild, simple_consistency
+from app.calculator.calculator import (
+    hand_is_wild,
+    simple_consistency,
+    run_test_hand_with_gambling,
+    CardDatabase,
+)
 
 logger = logging.getLogger()
 logger.setLevel("INFO")
@@ -14,22 +19,17 @@ CARD_DATABASE_BUCKET_NAME = f"{os.environ.get('ENV_PREFIX', 'dev')}-card-databas
 CARD_DATABASE_KEY = "cards-detailed.json"
 s3 = boto3.client("s3")
 
-# Minimal mock card database keyed by card ID
-# card_database = {
-#     80181649: {"frameType": "spell", "attribute": None, "race": None, "name": "A Case for K9"},
-#     86988864: {"frameType": "effect", "attribute": None, "race": "Beast", "name": "3-Hump Lacooda"},
-#     14261867: {"frameType": "effect", "attribute": "DARK", "race": "Insect", "name": "8-Claws Scorpion"},
-#     23771716: {"frameType": "normal", "attribute": "WATER", "race": "Fish", "name": "7 Colored Fish"},
-#     6850209: {"frameType": "spell", "attribute": "DARK", "race": "Quick-Play", "name": "A Deal with Dark Ruler"},
-#     68170903: {"frameType": "trap", "attribute": None, "race": None, "name": "A Feint Plan"},
-# }
-
-# # Wildcard definitions for IDs
-# wildcard_lookup = {
-#     "any_spell": lambda card_id: card_database[card_id]["frameType"] == "spell",
-#     "any_trap": lambda card_id: card_database[card_id]["frameType"] == "trap",
-#     "any_dark": lambda card_id: card_database[card_id].get("attribute") == "DARK",
-# }
+GAMBLING_CARDS = {
+    1475311: {  # Allure of Darkness
+        "draw": 2,
+        # must discard one card matching this
+        "discard": [("attribute", "DARK")],
+    },
+    70368879: {  # Upstart Goblin
+        "draw": 1,
+        "discard": [],
+    },
+}
 
 
 def _serialize_result(result):
@@ -51,12 +51,12 @@ def lambda_handler(event, context):
     names = event["names"]
     ratios = event["ratios"]
     ideal_hands = event["ideal_hands"]
-    num_hands = 1_000_000 # fixed for now
+    num_hands = 1_000_000  # fixed for now
 
-    # Feature toggle: whether to use hand_is_wild
-    use_wildcards = event.get("use_wildcards", False)
+    # Feature toggle: whether to use gambling
+    use_gambling = event.get("use_gambling", False)
 
-    logger.info(f"Job {job_id} started. use_wildcards={use_wildcards}")
+    logger.info(f"Job {job_id} started. use_gambling={use_gambling}")
 
     logger.info("Reading card database...")
 
@@ -64,21 +64,28 @@ def lambda_handler(event, context):
         resp = s3.get_object(
             Bucket=CARD_DATABASE_BUCKET_NAME, Key=CARD_DATABASE_KEY)
         card_list = json.load(resp["Body"])
-        card_database = {card["id"]: card for card in card_list}
+        # Build database keyed by integer ID
+        card_database: CardDatabase = {
+            int(card["id"]): card for card in card_list}
         logger.info("Card database loaded successfully from S3.")
     except Exception as e:
         logger.error(f"Failed to load card database from S3: {e}")
-        card_database = {}
+        card_database: CardDatabase = {}
 
     try:
-        if use_wildcards:
-            def hand_checker(hand, ideal_counters): return hand_is_wild(
-                hand,
-                ideal_counters,
-                card_database,
+        # Always use run_test_hand_with_gambling for consistency checks
+        def hand_checker(remaining_deck, hand, ideal_counters):
+            return run_test_hand_with_gambling(
+                hand=hand,
+                ideal_hands=ideal_counters,
+                card_database=card_database,
+                remaining_deck=remaining_deck,
+                gambling_cards=GAMBLING_CARDS,
+            ) if use_gambling else hand_is_wild(
+                hand=hand,
+                ideal_hands=ideal_hands,
+                card_database=card_database,
             )
-        else:
-            hand_checker = hand_is_good
 
         result = simple_consistency(
             deckcount=deckcount,

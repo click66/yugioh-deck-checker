@@ -1,7 +1,7 @@
-from app.calculator.calculator import run_test_hand_with_gambling
+from app.calculator.calculator import hand_is_wild, run_test_hand_with_gambling
 
 # Minimal mock card database keyed by card ID
-card_database = {
+CARD_DATABASE = {
     80181649: {"superType": "spell", "name": "A Case for K9"},
     86988864: {"superType": "monster", "attribute": "EARTH", "race": "Beast", "name": "3-Hump Lacooda"},
     14261867: {"superType": "monster", "attribute": "DARK", "race": "Insect", "name": "8-Claws Scorpion"},
@@ -12,7 +12,7 @@ card_database = {
     1475311: {"superType": "spell", "name": "Allure of Darkness", "race": "Normal"},
 }
 
-gambling_cards = {
+GAMBLING_CARDS = {
     1475311: {  # Allure of Darkness
         "draw": 2,
         # must discard one card matching this
@@ -25,16 +25,24 @@ gambling_cards = {
 }
 
 
+def hand_checker(hand, ideal_hands, card_database): return hand_is_wild(
+    hand,
+    ideal_hands,
+    card_database,
+)
+
+
 def test_exact_match():
     hand = [80181649, 86988864]
     ideal_hands = [[80181649, 86988864]]
-    deck = []
+    remaining_deck = []
     assert run_test_hand_with_gambling(
+        hand_checker,
         hand,
         ideal_hands,
-        card_database,
-        deck,
-        gambling_cards,
+        CARD_DATABASE,
+        remaining_deck,
+        GAMBLING_CARDS,
     ) == (True, True)
 
 
@@ -47,11 +55,12 @@ def test_no_gamble_card_in_hand():
     ideal_hands = [[80181649]]
 
     result = run_test_hand_with_gambling(
+        hand_checker,
         hand,
         ideal_hands,
-        card_database,
+        CARD_DATABASE,
         remaining_deck,
-        gambling_cards,
+        GAMBLING_CARDS,
     )
 
     # No gamble card in hand, should just fail
@@ -72,11 +81,12 @@ def test_allure_of_darkness_with_dark():
     ideal_hands = [[86988864, 80181649]]
 
     result = run_test_hand_with_gambling(
+        hand_checker,
         hand,
         ideal_hands,
-        card_database,
+        CARD_DATABASE,
         remaining_deck,
-        gambling_cards,
+        GAMBLING_CARDS,
     )
     assert result == (False, True)
 
@@ -88,11 +98,12 @@ def test_gamble_without_discardable():
 
     # There is no DARK card to discard, gamble should not trigger
     result = run_test_hand_with_gambling(
+        hand_checker,
         hand,
         ideal_hands,
-        card_database,
+        CARD_DATABASE,
         remaining_deck,
-        gambling_cards,
+        GAMBLING_CARDS,
     )
     assert result == (False, False)
 
@@ -109,9 +120,10 @@ def test_discard_constraint_single_count():
     ideal_hands = [[80181649]]
 
     result = run_test_hand_with_gambling(
+        hand_checker,
         hand,
         ideal_hands,
-        card_database,
+        CARD_DATABASE,
         remaining_deck,
         gambling_cards_dup,
     )
@@ -126,11 +138,12 @@ def test_gamble_draw_limited_by_deck():
     ideal_hands = [[80181649]]
 
     result = run_test_hand_with_gambling(
+        hand_checker,
         hand,
         ideal_hands,
-        card_database,
+        CARD_DATABASE,
         remaining_deck,
-        gambling_cards,
+        GAMBLING_CARDS,
     )
 
     # Should fail because you cannot Allure with 1 card in deck
@@ -143,11 +156,12 @@ def test_wildcard_satisfied_by_gamble():
     ideal_hands = [["any_attribute_dark"]]
 
     result = run_test_hand_with_gambling(
+        hand_checker,
         hand,
         ideal_hands,
-        card_database,
+        CARD_DATABASE,
         remaining_deck,
-        gambling_cards,
+        GAMBLING_CARDS,
     )
 
     # Should fail as gambling should not run if the discard requirement
