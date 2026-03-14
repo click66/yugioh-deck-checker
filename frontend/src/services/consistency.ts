@@ -25,8 +25,21 @@ export const ConsistencyJobSchema = z.object({
     ]),
     result: z
         .object({
-            value: z.string(),
-            value_6: z.string(),
+            p5: z.string(),
+            p6: z.string(),
+            p5_with_gambling: z.string().optional(),
+            p6_with_gambling: z.string().optional(),
+            rescued_5: z.string().optional(),
+            rescued_6: z.string().optional(),
+            gamble_seen_5: z.record(z.string(), z.string()).optional(),
+            gamble_seen_6: z.record(z.string(), z.string()).optional(),
+            gamble_failed_5: z.string().optional(),
+            gamble_failed_6: z.string().optional(),
+            gamble_unplayable_5: z.string().optional(),
+            gamble_unplayable_6: z.string().optional(),
+            gamble_attempted_5: z.string().optional(),
+            gamble_attempted_6: z.string().optional(),
+            useful_gambles: z.record(z.string(), z.string()).optional(),
         })
         .optional()
         .nullable(),

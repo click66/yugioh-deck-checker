@@ -657,8 +657,72 @@ function Step3({ expanded, toggle, analysisProps, children }: any) {
         useGambling,
         setUseGambling,
     } = analysisProps
-    const p5 = job?.result?.value ? parseFloat(job.result.value) : null
-    const p6 = job?.result?.value_6 ? parseFloat(job.result.value_6) : null
+
+    const parseNumber = (val: string | number | undefined) =>
+        val !== undefined ? Number(val) : 0
+
+    const renderGambleStats = (
+        label: string,
+        seen: Record<string, string>,
+        rescued: Record<string, string>,
+        failed: Record<string, string>,
+        unplayable: Record<string, string>,
+        attempted: Record<string, string>,
+    ) => {
+        const cards = Object.keys(seen)
+        if (cards.length === 0) return <p className="text-gray-500">No gambling cards used</p>
+
+        // Compute top-level totals
+        const totalSeen = cards.reduce((acc, id) => acc + parseNumber(seen[id]), 0)
+        const totalRescued = cards.reduce((acc, id) => acc + parseNumber(rescued[id]), 0)
+        const totalFailed = cards.reduce((acc, id) => acc + parseNumber(failed[id]), 0)
+        const totalUnplayable = cards.reduce((acc, id) => acc + parseNumber(unplayable[id]), 0)
+        const totalAttempted = cards.reduce((acc, id) => acc + parseNumber(attempted[id]), 0)
+
+        const rescuePct = totalAttempted > 0 ? ((totalRescued / totalAttempted) * 100).toFixed(1) : '0'
+        const failPct = totalAttempted > 0 ? ((totalFailed / totalAttempted) * 100).toFixed(1) : '0'
+        const unplayablePct = totalAttempted > 0 ? ((totalUnplayable / totalAttempted) * 100).toFixed(1) : '0'
+
+        return (
+            <div className="mt-3">
+                <div className="font-medium mb-2">{label}</div>
+
+                {/* Top-level totals */}
+                <div className="mb-2 p-2 bg-gray-100 rounded text-sm">
+                    <div>Total Seen: {totalSeen}</div>
+                    <div>Total Rescued: {totalRescued} ({rescuePct}%)</div>
+                    <div>Total Failed: {totalFailed} ({failPct}%)</div>
+                    <div>Total Unplayable: {totalUnplayable} ({unplayablePct}%)</div>
+                    <div>Total Attempts: {totalAttempted}</div>
+                </div>
+
+                {/* Per-card breakdown */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {cards.map((id) => {
+                        const s = parseNumber(seen[id])
+                        const r = parseNumber(rescued[id])
+                        const f = parseNumber(failed[id])
+                        const u = parseNumber(unplayable[id])
+                        const a = parseNumber(attempted[id])
+                        const rescuePctCard = a > 0 ? ((r / a) * 100).toFixed(1) : '0'
+                        const failPctCard = a > 0 ? ((f / a) * 100).toFixed(1) : '0'
+                        const unplayablePctCard = a > 0 ? ((u / a) * 100).toFixed(1) : '0'
+
+                        return (
+                            <div key={id} className="p-3 border rounded-lg bg-gray-50">
+                                <div className="text-sm text-gray-600 mb-1">Card ID: {id}</div>
+                                <div className="text-sm">Seen: {s} hands</div>
+                                <div className="text-sm">Rescued: {r} hands ({rescuePctCard}%)</div>
+                                <div className="text-sm">Failed: {f} hands ({failPctCard}%)</div>
+                                <div className="text-sm">Unplayable: {u} hands ({unplayablePctCard}%)</div>
+                                <div className="text-sm">Attempted: {a} hands</div>
+                            </div>
+                        )
+                    })}
+                </div>
+            </div>
+        )
+    }
 
     return (
         <Panel
@@ -701,35 +765,59 @@ function Step3({ expanded, toggle, analysisProps, children }: any) {
             {loading && (
                 <div className="flex flex-col items-center gap-4 py-6">
                     <div className="w-10 h-10 border-4 border-purple-400 border-t-transparent rounded-full animate-spin"></div>
-                    <div className="text-gray-600 text-sm">
-                        {loadingMessage}
-                    </div>
+                    <div className="text-gray-600 text-sm">{loadingMessage}</div>
                 </div>
             )}
 
-            {p5 !== null && p6 !== null && (
+            {job?.result && (
                 <>
                     <hr className="w-[70%] border-t border-gray-300 mx-auto my-6"></hr>
-                    <p className="text-center">
-                        Analysis complete; in 1 million hands, the percentage we
-                        saw one of your ideal hands was:
+                    <p className="text-center mb-4">
+                        Analysis complete; in {hands.length} hands, the success probabilities were:
                     </p>
-                    <div className="mt-4 flex flex-col sm:flex-row gap-4">
-                        <div className="flex-1 p-4 border rounded-lg bg-white shadow text-center">
-                            <div className="text-gray-500 mb-1">
-                                5-card hand
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {/* 5-card hand */}
+                        <div className="p-4 border rounded-lg bg-white shadow text-center">
+                            <div className="font-medium mb-1">5-card hand</div>
+                            <div className="text-lg text-purple-600">
+                                Without gambling: {(parseNumber(job.result.p5) * 100).toFixed(2)}%
                             </div>
-                            <div className="text-2xl font-bold text-purple-600">
-                                {(p5 * 100).toFixed(2)}%
+                            <div className="text-lg text-purple-600">
+                                With gambling: {(parseNumber(job.result.p5_with_gambling) * 100).toFixed(2)}%
                             </div>
+                            <div className="text-sm mt-2 text-gray-700">
+                                Rescued hands: {parseNumber(job.result.rescued_5)}
+                            </div>
+                            {renderGambleStats(
+                                'Gambling Cards (5-card)',
+                                job.result.gamble_seen_5 || {},
+                                job.result.useful_gambles || {},
+                                job.result.gamble_failed_5 || {},
+                                job.result.gamble_unplayable_5 || {},
+                                job.result.gamble_attempted_5 || {},
+                            )}
                         </div>
-                        <div className="flex-1 p-4 border rounded-lg bg-white shadow text-center">
-                            <div className="text-gray-500 mb-1">
-                                6-card hand
+
+                        {/* 6-card hand */}
+                        <div className="p-4 border rounded-lg bg-white shadow text-center">
+                            <div className="font-medium mb-1">6-card hand</div>
+                            <div className="text-lg text-purple-600">
+                                Without gambling: {(parseNumber(job.result.p6) * 100).toFixed(2)}%
                             </div>
-                            <div className="text-2xl font-bold text-purple-600">
-                                {(p6 * 100).toFixed(2)}%
+                            <div className="text-lg text-purple-600">
+                                With gambling: {(parseNumber(job.result.p6_with_gambling) * 100).toFixed(2)}%
                             </div>
+                            <div className="text-sm mt-2 text-gray-700">
+                                Rescued hands: {parseNumber(job.result.rescued_6)}
+                            </div>
+                            {renderGambleStats(
+                                'Gambling Cards (6-card)',
+                                job.result.gamble_seen_6 || {},
+                                job.result.useful_gambles || {},
+                                job.result.gamble_failed_6 || {},
+                                job.result.gamble_unplayable_6 || {},
+                                job.result.gamble_attempted_6 || {},
+                            )}
                         </div>
                     </div>
                 </>
