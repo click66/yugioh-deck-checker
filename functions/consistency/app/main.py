@@ -76,6 +76,7 @@ def lambda_handler(event, context):
         # Always use run_test_hand_with_gambling for consistency checks
         def hand_checker(remaining_deck, hand, ideal_counters):
             return run_test_hand_with_gambling(
+                hand_checker=hand_is_wild,
                 hand=hand,
                 ideal_hands=ideal_counters,
                 card_database=card_database,
