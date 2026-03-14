@@ -645,9 +645,9 @@ function Step2({ expanded, toggle, handProps, setExpandedSteps }: any) {
         </Panel>
     )
 }
+
 function Step3({ expanded, toggle, analysisProps, children }: any) {
     const {
-        hands,
         job,
         loading,
         loadingMessage,
@@ -657,50 +657,7 @@ function Step3({ expanded, toggle, analysisProps, children }: any) {
         setUseGambling,
     } = analysisProps
 
-    const cardDatabase = useCardDatabase().cards
-
-    // Parse numeric metrics from JSON
-    const p5 = job?.result?.p5 ? parseFloat(job.result.p5) : 0
-    const p6 = job?.result?.p6 ? parseFloat(job.result.p6) : 0
-    const p5WithGambling = job?.result?.p5_with_gambling
-        ? parseFloat(job.result.p5_with_gambling)
-        : 0
-    const p6WithGambling = job?.result?.p6_with_gambling
-        ? parseFloat(job.result.p6_with_gambling)
-        : 0
-
-    const rescued5 = job?.result?.rescued_5 ? parseInt(job.result.rescued_5) : 0
-    const rescued6 = job?.result?.rescued_6 ? parseInt(job.result.rescued_6) : 0
-
-    const totalAttempts5 = job?.result?.gamble_attempted_5
-        ? parseInt(job.result.gamble_attempted_5)
-        : 0
-    const totalAttempts6 = job?.result?.gamble_attempted_6
-        ? parseInt(job.result.gamble_attempted_6)
-        : 0
-
-    const totalFailed5 = job?.result?.gamble_failed_5
-        ? parseInt(job.result.gamble_failed_5)
-        : 0
-    const totalFailed6 = job?.result?.gamble_failed_6
-        ? parseInt(job.result.gamble_failed_6)
-        : 0
-
-    const totalUnplayable5 = job?.result?.gamble_unplayable_5
-        ? parseInt(job.result.gamble_unplayable_5)
-        : 0
-    const totalUnplayable6 = job?.result?.gamble_unplayable_6
-        ? parseInt(job.result.gamble_unplayable_6)
-        : 0
-
-    const usefulGambles: Record<string, string> =
-        job?.result?.useful_gambles || {}
-    const gambleSeen5: Record<string, string> = job?.result?.gamble_seen_5 || {}
-    const gambleSeen6: Record<string, string> = job?.result?.gamble_seen_6 || {}
-
-    // Helper to lookup card name
-    const cardName = (id: string) =>
-        cardDatabase.find((c: any) => c.id === parseInt(id))?.name || id
+    const { cards: cardDatabase } = useCardDatabase()
 
     return (
         <Panel
@@ -725,8 +682,7 @@ function Step3({ expanded, toggle, analysisProps, children }: any) {
             {!loading && (
                 <button
                     onClick={runAnalysis}
-                    disabled={hands.length === 0}
-                    className="px-5 py-2 bg-purple-500 text-white rounded disabled:opacity-50 "
+                    className="px-5 py-2 bg-purple-500 text-white rounded hover:bg-purple-600"
                 >
                     Run Analysis
                 </button>
@@ -748,113 +704,160 @@ function Step3({ expanded, toggle, analysisProps, children }: any) {
                     </div>
                 </div>
             )}
-
-            {(p5 || p6) && (
-                <>
-                    <hr className="w-[70%] border-t border-gray-300 mx-auto my-6" />
-                    <p className="text-center mb-4">
-                        Analysis complete; in {hands.length} hands, the
-                        probability of opening one of your ideal hands was:
-                    </p>
-                    <div className="mt-4 flex flex-col sm:flex-row gap-4">
-                        <div className="flex-1 p-4 border rounded-lg bg-white shadow text-center">
-                            <div className="text-gray-500 mb-1">
-                                5-card hand
-                            </div>
-                            <div className="text-2xl font-bold text-purple-600">
-                                {(p5 * 100).toFixed(2)}%
-                            </div>
-                            <div className="text-gray-400 text-sm mt-1">
-                                With gambling:{' '}
-                                {(p5WithGambling * 100).toFixed(2)}%
-                            </div>
-                        </div>
-                        <div className="flex-1 p-4 border rounded-lg bg-white shadow text-center">
-                            <div className="text-gray-500 mb-1">
-                                6-card hand
-                            </div>
-                            <div className="text-2xl font-bold text-purple-600">
-                                {(p6 * 100).toFixed(2)}%
-                            </div>
-                            <div className="text-gray-400 text-sm mt-1">
-                                With gambling:{' '}
-                                {(p6WithGambling * 100).toFixed(2)}%
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Gambling Stats */}
-                    <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {[
-                            {
-                                title: '5-card hand',
-                                rescued: rescued5,
-                                seen: gambleSeen5,
-                                attempts: totalAttempts5,
-                                failed: totalFailed5,
-                                unplayable: totalUnplayable5,
-                            },
-                            {
-                                title: '6-card hand',
-                                rescued: rescued6,
-                                seen: gambleSeen6,
-                                attempts: totalAttempts6,
-                                failed: totalFailed6,
-                                unplayable: totalUnplayable6,
-                            },
-                        ].map((stat, idx) => (
-                            <div
-                                key={idx}
-                                className="flex-1 p-4 border rounded-lg bg-white shadow"
-                            >
-                                <div className="text-gray-600 font-medium mb-2">
-                                    {stat.title} Gambling Stats
-                                </div>
-                                <div className="text-sm text-gray-700 mb-1">
-                                    Total Rescued: {stat.rescued}
-                                </div>
-                                <div className="text-sm text-gray-700 mb-1">
-                                    Total Seen:{' '}
-                                    {Object.values(stat.seen).reduce(
-                                        (a, b) => a + parseInt(b),
-                                        0,
-                                    )}
-                                </div>
-                                <div className="text-sm text-gray-700 mb-1">
-                                    Total Attempts: {stat.attempts}
-                                </div>
-                                <div className="text-sm text-gray-700 mb-1">
-                                    Failed Attempts: {stat.failed}
-                                </div>
-                                <div className="text-sm text-gray-700 mb-2">
-                                    Unplayable: {stat.unplayable}
-                                </div>
-                                <div className="text-gray-500 text-sm font-medium mb-1">
-                                    Individual Cards:
-                                </div>
-                                <div className="flex flex-col gap-1">
-                                    {Object.entries(stat.seen).map(
-                                        ([cardId, seen]) => {
-                                            const rescuedCount =
-                                                usefulGambles[cardId] || '0'
-                                            return (
-                                                <div
-                                                    key={cardId}
-                                                    className="text-sm text-gray-700"
-                                                >
-                                                    {cardName(cardId)}: Seen{' '}
-                                                    {seen}, Rescued{' '}
-                                                    {rescuedCount}
-                                                </div>
-                                            )
-                                        },
-                                    )}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </>
-            )}
+            {job?.result && <Results job={job} cardDatabase={cardDatabase} />}
         </Panel>
+    )
+}
+
+interface ResultsProps {
+    job: ConsistencyJobResponse
+    cardDatabase: Card[]
+}
+
+export function Results({ job, cardDatabase }: ResultsProps) {
+    if (!job?.result) return null
+
+    const numHands = 1_000
+
+    const p5 = parseFloat(job.result.p5 || '0')
+    const p6 = parseFloat(job.result.p6 || '0')
+    const p5WithGambling = parseFloat(job.result.p5_with_gambling || '0')
+    const p6WithGambling = parseFloat(job.result.p6_with_gambling || '0')
+
+    const rescued5 = parseInt(job.result.rescued_5 || '0', 10)
+    const rescued6 = parseInt(job.result.rescued_6 || '0', 10)
+
+    const totalAttempts5 = parseInt(job.result.gamble_attempted_5 || '0', 10)
+    const totalAttempts6 = parseInt(job.result.gamble_attempted_6 || '0', 10)
+
+    const totalFailed5 = parseInt(job.result.gamble_failed_5 || '0', 10)
+    const totalFailed6 = parseInt(job.result.gamble_failed_6 || '0', 10)
+
+    const usefulGambles = job.result.useful_gambles || {}
+    const gambleSeen5 = job.result.gamble_seen_5 || {}
+    const gambleSeen6 = job.result.gamble_seen_6 || {}
+
+    const getCardName = (id: string) =>
+        cardDatabase.find((c) => `${c.id}` === id)?.name || id
+
+    const gamblingStats = [
+        {
+            title: '5-card hand',
+            rescued: rescued5,
+            attempts: totalAttempts5,
+            failed: totalFailed5,
+            seen: gambleSeen5,
+        },
+        {
+            title: '6-card hand',
+            rescued: rescued6,
+            attempts: totalAttempts6,
+            failed: totalFailed6,
+            seen: gambleSeen6,
+        },
+    ]
+
+    return (
+        <>
+            <hr className="w-[70%] border-t border-gray-300 mx-auto my-6" />
+            <p className="text-center mb-4">
+                Analysis complete; in {numHands.toLocaleString()} hands, the
+                probability of opening one of your ideal hands was:
+            </p>
+
+            <div className="mt-4 flex flex-col sm:flex-row gap-4">
+                <div className="flex-1 p-6 border rounded-lg bg-white shadow text-center">
+                    <div className="text-gray-500 mb-1">5-card hand</div>
+                    <div className="text-3xl font-bold text-purple-600">
+                        {(p5 * 100).toFixed(2)}%
+                    </div>
+                    <div className="text-gray-400 text-sm mt-2">
+                        With gambling: {(p5WithGambling * 100).toFixed(2)}%
+                    </div>
+                </div>
+                <div className="flex-1 p-6 border rounded-lg bg-white shadow text-center">
+                    <div className="text-gray-500 mb-1">6-card hand</div>
+                    <div className="text-3xl font-bold text-purple-600">
+                        {(p6 * 100).toFixed(2)}%
+                    </div>
+                    <div className="text-gray-400 text-sm mt-2">
+                        With gambling: {(p6WithGambling * 100).toFixed(2)}%
+                    </div>
+                </div>
+            </div>
+
+            <div className="mt-6 space-y-4">
+                {gamblingStats.map((stat) => {
+                    const totalActivated = Object.values(stat.seen).reduce(
+                        (acc: number, val: string) => acc + parseInt(val, 10),
+                        0,
+                    )
+
+                    const activatedPercent = (
+                        (totalActivated / numHands) *
+                        100
+                    ).toFixed(2)
+                    const rescuedPercent = (
+                        (stat.rescued / numHands) *
+                        100
+                    ).toFixed(2)
+                    const failedPercent = (
+                        (stat.failed / stat.attempts || 1) * 100
+                    ).toFixed(2)
+
+                    return (
+                        <div
+                            key={stat.title}
+                            className="p-4 border rounded-lg bg-white shadow"
+                        >
+                            <div className="text-gray-600 font-medium mb-2">
+                                {stat.title} Gambling Stats
+                            </div>
+                            <div className="flex flex-col sm:flex-row sm:gap-6 text-sm text-gray-700 mb-2">
+                                <div>Total Rescued: {rescuedPercent}%</div>
+                                <div>Total Attempts: {stat.attempts}</div>
+                                <div>Failed Attempts: {failedPercent}%</div>
+                                <div>Activated: {activatedPercent}%</div>
+                            </div>
+
+                            <div className="text-gray-500 text-sm font-medium mb-1">
+                                Individual Cards:
+                            </div>
+                            <div className="flex flex-col gap-1 text-sm text-gray-700">
+                                {Object.entries(stat.seen).map(
+                                    ([cardId, val]) => {
+                                        const activated = parseInt(val, 10)
+                                        const rescued = parseInt(
+                                            usefulGambles[cardId] || '0',
+                                            10,
+                                        )
+                                        const activatedPct = (
+                                            (activated / numHands) *
+                                            100
+                                        ).toFixed(2)
+                                        const rescuedPct = (
+                                            (rescued / numHands) *
+                                            100
+                                        ).toFixed(2)
+                                        return (
+                                            <div
+                                                key={cardId}
+                                                className="flex justify-between"
+                                            >
+                                                <div>{getCardName(cardId)}</div>
+                                                <div>
+                                                    Activated: {activatedPct}%,
+                                                    Rescued: {rescuedPct}%
+                                                </div>
+                                            </div>
+                                        )
+                                    },
+                                )}
+                            </div>
+                        </div>
+                    )
+                })}
+            </div>
+        </>
     )
 }
