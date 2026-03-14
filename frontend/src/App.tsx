@@ -733,7 +733,8 @@ export function Results({ job, cardDatabase }: ResultsProps) {
     const totalFailed5 = parseInt(job.result.gamble_failed_5 || '0', 10)
     const totalFailed6 = parseInt(job.result.gamble_failed_6 || '0', 10)
 
-    const usefulGambles = job.result.useful_gambles || {}
+    const usefulGambles5 = job.result.useful_gambles_5 || {}
+    const usefulGambles6 = job.result.useful_gambles_6 || {}
     const gambleSeen5 = job.result.gamble_seen_5 || {}
     const gambleSeen6 = job.result.gamble_seen_6 || {}
 
@@ -747,6 +748,7 @@ export function Results({ job, cardDatabase }: ResultsProps) {
             attempts: totalAttempts5,
             failed: totalFailed5,
             seen: gambleSeen5,
+            usefulGambles: usefulGambles5,
         },
         {
             title: '6-card hand',
@@ -754,6 +756,7 @@ export function Results({ job, cardDatabase }: ResultsProps) {
             attempts: totalAttempts6,
             failed: totalFailed6,
             seen: gambleSeen6,
+            usefulGambles: usefulGambles6,
         },
     ]
 
@@ -788,18 +791,12 @@ export function Results({ job, cardDatabase }: ResultsProps) {
 
             <div className="mt-6 space-y-4">
                 {gamblingStats.map((stat) => {
-                    const totalActivated = Object.values(stat.seen).reduce(
-                        (acc: number, val: string) => acc + parseInt(val, 10),
-                        0,
-                    )
-
-                    const activatedPercent = (
-                        (totalActivated / numHands) *
+                    const gambledPercent = (
+                        (stat.attempts / numHands) *
                         100
                     ).toFixed(2)
                     const rescuedPercent = (
-                        (stat.rescued / numHands) *
-                        100
+                        (stat.rescued / stat.attempts || 1) * 100
                     ).toFixed(2)
                     const failedPercent = (
                         (stat.failed / stat.attempts || 1) * 100
@@ -814,10 +811,12 @@ export function Results({ job, cardDatabase }: ResultsProps) {
                                 {stat.title} Gambling Stats
                             </div>
                             <div className="flex flex-col sm:flex-row sm:gap-6 text-sm text-gray-700 mb-2">
-                                <div>Total Rescued: {rescuedPercent}%</div>
-                                <div>Total Attempts: {stat.attempts}</div>
-                                <div>Failed Attempts: {failedPercent}%</div>
-                                <div>Activated: {activatedPercent}%</div>
+                                <div>
+                                    Gambled on {gambledPercent}% of hands; of
+                                    which:
+                                </div>
+                                <div>{rescuedPercent}% were rescued</div>
+                                <div>{failedPercent}% failed</div>
                             </div>
 
                             <div className="text-gray-500 text-sm font-medium mb-1">
@@ -826,17 +825,17 @@ export function Results({ job, cardDatabase }: ResultsProps) {
                             <div className="flex flex-col gap-1 text-sm text-gray-700">
                                 {Object.entries(stat.seen).map(
                                     ([cardId, val]) => {
-                                        const activated = parseInt(val, 10)
+                                        const seen = parseInt(val, 10)
                                         const rescued = parseInt(
-                                            usefulGambles[cardId] || '0',
+                                            stat.usefulGambles[cardId] || '0',
                                             10,
                                         )
-                                        const activatedPct = (
-                                            (activated / numHands) *
+                                        const seenPct = (
+                                            (seen / numHands) *
                                             100
                                         ).toFixed(2)
                                         const rescuedPct = (
-                                            (rescued / numHands) *
+                                            (rescued / seen) *
                                             100
                                         ).toFixed(2)
                                         return (
@@ -846,8 +845,8 @@ export function Results({ job, cardDatabase }: ResultsProps) {
                                             >
                                                 <div>{getCardName(cardId)}</div>
                                                 <div>
-                                                    Activated: {activatedPct}%,
-                                                    Rescued: {rescuedPct}%
+                                                    Seen in {seenPct}% of hands;
+                                                    success rate: {rescuedPct}%
                                                 </div>
                                             </div>
                                         )

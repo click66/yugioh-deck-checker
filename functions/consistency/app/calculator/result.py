@@ -18,7 +18,8 @@ class ConsistencyResult:
     rescued_6: int
 
     # Which gambling cards successfully rescued hands
-    useful_gambles: Counter[int]
+    useful_gambles_5: Counter[int]
+    useful_gambles_6: Counter[int]
 
     # Gamble cards seen in hands
     gamble_seen_5: Counter[int]

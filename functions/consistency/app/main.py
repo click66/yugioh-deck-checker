@@ -142,7 +142,8 @@ def lambda_handler(event, context):
             "rescued_6": result_dict["rescued_6"],
 
             # Gamble metrics
-            "useful_gambles": serialize_counter(result_dict.get("useful_gambles", Counter())),
+            "useful_gambles_5": serialize_counter(result_dict.get("useful_gambles_5", Counter())),
+            "useful_gambles_6": serialize_counter(result_dict.get("useful_gambles_6", Counter())),
             "gamble_seen_5": serialize_counter(result_dict.get("gamble_seen_5", Counter())),
             "gamble_seen_6": serialize_counter(result_dict.get("gamble_seen_6", Counter())),
             "gamble_attempted_5": result_dict.get("gamble_attempted_5", 0),

@@ -310,7 +310,8 @@ def simple_consistency(
     gamble_attempted_5 = gamble_attempted_6 = 0
     gamble_seen_5: Counter[int] = Counter()
     gamble_seen_6: Counter[int] = Counter()
-    useful_gambles: Counter[int] = Counter()
+    useful_gambles_5: Counter[int] = Counter()
+    useful_gambles_6: Counter[int] = Counter()
 
     for _ in range(num_hands):
         # 5-card hand
@@ -320,7 +321,7 @@ def simple_consistency(
             remaining_deck_5.remove(card)
 
         result5: HandTestResult = hand_tester(
-            remaining_deck_5, hand5, ideal_counters)
+            remaining_deck_5, hand5.copy(), ideal_counters)
         if result5.matches_without_gambling:
             good_5 += 1
         if result5.rescued_with_gambling:
@@ -329,17 +330,17 @@ def simple_consistency(
         unplayable_gambles_5 += result5.gamble_unplayable
         gamble_attempted_5 += result5.gamble_attempted
         gamble_seen_5.update(result5.gamble_seen)
-        useful_gambles.update(result5.useful_gambles)
+        useful_gambles_5.update(result5.useful_gambles)
 
-        # 6-card hand
+        # 6-card hand (5-card hand + 1 random card)
         if deckcount >= 6:
-            hand6 = random.sample(deck, 6)
-            remaining_deck_6 = deck.copy()
-            for card in hand6:
-                remaining_deck_6.remove(card)
+            remaining_deck_for_6 = remaining_deck_5.copy()
+            extra_card = random.choice(remaining_deck_for_6)
+            hand6 = hand5 + [extra_card]
+            remaining_deck_for_6.remove(extra_card)
 
             result6: HandTestResult = hand_tester(
-                remaining_deck_6, hand6, ideal_counters)
+                remaining_deck_for_6, hand6, ideal_counters)
             if result6.matches_without_gambling:
                 good_6 += 1
             if result6.rescued_with_gambling:
@@ -348,7 +349,7 @@ def simple_consistency(
             unplayable_gambles_6 += result6.gamble_unplayable
             gamble_attempted_6 += result6.gamble_attempted
             gamble_seen_6.update(result6.gamble_seen)
-            useful_gambles.update(result6.useful_gambles)
+            useful_gambles_6.update(result6.useful_gambles)
 
     p5 = good_5 / num_hands
     p6 = good_6 / num_hands if deckcount >= 6 else 0.0
@@ -363,7 +364,8 @@ def simple_consistency(
         p6_with_gambling=p6_with_gambling,
         rescued_5=rescued_5,
         rescued_6=rescued_6,
-        useful_gambles=useful_gambles,
+        useful_gambles_5=useful_gambles_5,
+        useful_gambles_6=useful_gambles_6,
         gamble_seen_5=gamble_seen_5,
         gamble_seen_6=gamble_seen_6,
         gamble_attempted_5=gamble_attempted_5,
