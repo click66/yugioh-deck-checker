@@ -1,5 +1,4 @@
 import os
-from collections import Counter as C
 from typing import Counter
 
 import boto3
@@ -9,6 +8,7 @@ from app.calculator.calculator import (
     hand_is_wild,
     simple_consistency,
     run_test_hand_with_gambling,
+    run_test_hand_without_gambling,
     CardDatabase,
 )
 from app.calculator.result import HandTestResult
@@ -94,18 +94,11 @@ def lambda_handler(event, context):
                     gambling_cards=GAMBLING_CARDS,
                 )
             else:
-                # Wrap boolean return in HandTestResult with defaults for gambling stats
-                result = hand_is_wild(
+                return run_test_hand_without_gambling(
+                    hand_checker=hand_is_wild,
                     hand=hand,
                     ideal_hands=ideal_counters,
                     card_database=card_database,
-                )
-                return HandTestResult(
-                    matches_without_gambling=result,
-                    matches_with_gambling=result,
-                    rescued_with_gambling=0,
-                    useful_gambles=Counter(),
-                    failed_gamble_attempts=0,
                 )
 
         result = simple_consistency(
@@ -129,22 +122,40 @@ def lambda_handler(event, context):
     update_expression = "SET #s = :status"
 
     if result is not None:
-        # Serialize all metrics from the result dataclass
+        # Convert the dataclass to a dict
         result_dict = {k: getattr(result, k)
                        for k in result.__dataclass_fields__}
 
-        # Convert all Counters to dicts for DynamoDB
-        serialized_result = {}
-        for key, value in result_dict.items():
-            if isinstance(value, C):
-                serialized_result[key] = dict(value)
-            else:
-                serialized_result[key] = value
+        # Convert Counters to string-keyed dicts for DynamoDB
+        def serialize_counter(counter: Counter[int]) -> dict:
+            return {str(k): v for k, v in counter.items()}
+
+        combined_result = {
+            # Probabilities
+            "p5": result_dict["p5"],
+            "p6": result_dict["p6"],
+            "p5_with_gambling": result_dict["p5_with_gambling"],
+            "p6_with_gambling": result_dict["p6_with_gambling"],
+
+            # Rescued hands
+            "rescued_5": result_dict["rescued_5"],
+            "rescued_6": result_dict["rescued_6"],
+
+            # Gamble metrics
+            "useful_gambles": serialize_counter(result_dict.get("useful_gambles", Counter())),
+            "gamble_seen_5": serialize_counter(result_dict.get("gamble_seen_5", Counter())),
+            "gamble_seen_6": serialize_counter(result_dict.get("gamble_seen_6", Counter())),
+            "gamble_attempted_5": result_dict.get("gamble_attempted_5", 0),
+            "gamble_attempted_6": result_dict.get("gamble_attempted_6", 0),
+            "gamble_failed_5": result_dict.get("failed_gambles_5", 0),
+            "gamble_failed_6": result_dict.get("failed_gambles_6", 0),
+            "gamble_unplayable_5": result_dict.get("unplayable_gambles_5", 0),
+            "gamble_unplayable_6": result_dict.get("unplayable_gambles_6", 0),
+        }
 
         update_expression += ", #r = :result"
         expression_attr_names["#r"] = "result"
-        expression_attr_values[":result"] = _serialize_result(
-            serialized_result)
+        expression_attr_values[":result"] = _serialize_result(combined_result)
 
     dynamodb.update_item(
         TableName=TABLE_NAME,

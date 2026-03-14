@@ -136,6 +136,12 @@ def run_test_hand_without_gambling(
     return HandTestResult(
         matches_without_gambling=result,
         matches_with_gambling=result,
+        rescued_with_gambling=0,
+        useful_gambles=Counter(),
+        gamble_seen=Counter(),
+        gamble_attempted=0,
+        gamble_failed=0,
+        gamble_unplayable=0,
     )
 
 
