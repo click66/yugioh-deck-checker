@@ -70,6 +70,7 @@ export default function App() {
         loadingMessages[Math.floor(Math.random() * loadingMessages.length)],
     )
     const [error, setError] = useState<string | null>(null)
+    const [useGambling, setUseGambling] = useState(false)
 
     useEffect(() => {
         localStorage.setItem(DECK_STORAGE_KEY, JSON.stringify(deck))
@@ -170,7 +171,7 @@ export default function App() {
                 hand.map((c) => (typeof c.id === 'number' ? `${c.id}` : c.id)),
             ),
             num_hands: hands.length,
-            use_wildcards: true,
+            use_gambling: useGambling,
         }
 
         const jobResp = await createJob(payload)
@@ -207,6 +208,8 @@ export default function App() {
         loadingMessage,
         runAnalysis,
         error,
+        useGambling,
+        setUseGambling,
     }
 
     return (
@@ -644,8 +647,16 @@ function Step2({ expanded, toggle, handProps, setExpandedSteps }: any) {
 }
 
 function Step3({ expanded, toggle, analysisProps, children }: any) {
-    const { hands, job, loading, loadingMessage, runAnalysis, error } =
-        analysisProps
+    const {
+        hands,
+        job,
+        loading,
+        loadingMessage,
+        runAnalysis,
+        error,
+        useGambling,
+        setUseGambling,
+    } = analysisProps
     const p5 = job?.result?.value ? parseFloat(job.result.value) : null
     const p6 = job?.result?.value_6 ? parseFloat(job.result.value_6) : null
 
@@ -656,6 +667,19 @@ function Step3({ expanded, toggle, analysisProps, children }: any) {
             toggle={toggle}
             expandable={!loading}
         >
+            <div className="flex items-center gap-3 mb-4">
+                <input
+                    type="checkbox"
+                    id="use-gambling"
+                    checked={useGambling}
+                    onChange={(e) => setUseGambling(e.target.checked)}
+                    className="w-4 h-4"
+                />
+                <label htmlFor="use-gambling" className="text-gray-700">
+                    Use gambling?
+                </label>
+            </div>
+
             {!loading && (
                 <button
                     onClick={runAnalysis}

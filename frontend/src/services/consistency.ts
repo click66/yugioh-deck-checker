@@ -48,7 +48,7 @@ export function createJob(payload: {
     ratios: number[]
     ideal_hands: string[][]
     num_hands: number
-    use_wildcards: boolean
+    use_gambling: boolean
 }): Promise<ConsistencyJobResponse> {
     return api
         .post('/consistency/jobs/create', payload)
