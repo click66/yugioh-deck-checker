@@ -1,4 +1,3 @@
-import pytest
 from app.calculator.calculator import run_test_hand_with_gambling
 
 # Minimal mock card database keyed by card ID

@@ -1,11 +1,10 @@
 import logging
 import random
 from collections import Counter
-from typing import List, NotRequired, Sequence, TypeAlias, TypedDict, Union
+from typing import List, Sequence, TypeAlias, TypedDict, Union, NotRequired
 
 from app.calculator.exceptions import InsufficientDeckSizeError, InvalidCardCountsError
 from app.calculator.result import ConsistencyResult
-
 
 logger = logging.getLogger()
 logger.setLevel("INFO")
@@ -18,8 +17,10 @@ class Card(TypedDict):
     attribute: NotRequired[str]
 
 
-CardDatabase: TypeAlias = dict[int | str, Card]
+# Card database keyed by integer card ID
+CardDatabase: TypeAlias = dict[int, Card]
 
+# Discard requirements for gamble cards: (field, value)
 DiscardConstraint: TypeAlias = tuple[str, str]
 
 
@@ -28,12 +29,13 @@ class GambleCard(TypedDict):
     discard: NotRequired[list[DiscardConstraint]]
 
 
-GamblingCards: TypeAlias = dict[int | str, GambleCard]
+# Gambling cards keyed by integer card ID
+GamblingCards: TypeAlias = dict[int, GambleCard]
 
 
 def hand_is_good(
-    hand: Sequence[str],
-    ideal_hands: Sequence[Union[Sequence[str], Counter]]
+    hand: Sequence[int],
+    ideal_hands: Sequence[Union[Sequence[int], Counter]]
 ) -> bool:
     """
     Return True if the hand matches any of the ideal hands.
@@ -54,8 +56,8 @@ def hand_is_good(
 
 
 def hand_is_wild(
-    hand: Sequence[int | str],
-    ideal_hands: Sequence[Union[Sequence[str], Counter]],
+    hand: Sequence[int],
+    ideal_hands: Sequence[Union[Sequence[int | str], Counter]],
     card_database: CardDatabase
 ) -> bool:
     """
@@ -66,34 +68,32 @@ def hand_is_wild(
         any_race_quick-play
     Accepts ideal_hands as list of lists (for tests) or list of Counters (optimized).
     """
-
     hand_counter = Counter(hand)
 
     # Precompute attribute counts for the hand (all fields)
     attr_counter = Counter()
     for c in hand:
-        info = card_database.get(int(c))
+        info = card_database.get(c)
         if info:
             for field, value in info.items():
                 if value is not None:
                     attr_counter[(field, value)] += 1
 
-    def match_pattern(pattern: Union[Sequence[Union[int, str]], Counter]) -> bool:
+    def match_pattern(pattern: Union[Sequence[int | str], Counter]) -> bool:
         pat_counter = pattern if isinstance(
             pattern, Counter) else Counter(pattern)
-
         remaining_attrs = Counter()
 
         # First check exact cards
         for card, count in pat_counter.items():
-            if not (isinstance(card, str) and card.startswith("any_")):
-                card_info = card_database.get(int(card))
+            if isinstance(card, int):
+                card_info = card_database.get(card)
                 if card_info is None:
                     return False
-
                 if hand_counter[card] < count:
                     return False
 
+                # Track remaining attributes for wildcard matching
                 for field, value in card_info.items():
                     if value is not None:
                         remaining_attrs[(field, value)] -= count
@@ -116,31 +116,31 @@ def hand_is_wild(
 
 
 def run_test_hand_with_gambling(
-    hand: Sequence[int | str],
+    hand: Sequence[int],
     ideal_hands: Sequence[Union[Sequence[int | str], Counter]],
-    card_database: dict[int | str, Card],
-    remaining_deck: list[int | str],
+    card_database: CardDatabase,
+    remaining_deck: list[int],
     gambling_cards: GamblingCards,
 ) -> tuple[bool, bool]:
     """
-        Run hands with gambling enabled, in addition to basic checking.
-        If the given test hand is not one of the ideal hands, but contains
-        the ability to gamble, will run the gamble and then re-evaluate the
-        hand.
+    Run hands with gambling enabled, in addition to basic checking.
+    If the given test hand is not one of the ideal hands, but contains
+    the ability to gamble, will run the gamble and then re-evaluate the
+    hand.
 
-        Arguments:
-         - hand: The test hand
-         - ideal_hands: Sequence or Counter of ideal hands to check against
-         - card_database: Reference to dict of cards
-         - deck: Complete deck against which we're testing (test hand will 
-            be removed)
-         - gambling_cards: Reference to dict of GambleCards
+    Arguments:
+     - hand: The test hand
+     - ideal_hands: Sequence or Counter of ideal hands to check against
+     - card_database: Reference to dict of cards
+     - deck: Complete deck against which we're testing (test hand will 
+        be removed)
+     - gambling_cards: Reference to dict of GambleCards
 
-        Will return details of:
-         - Count of hands that were ideal without gambling
-         - Count of hands that were "rescued" with gambling
-         - Most "useful" gambling cards
-         - Number of times gamlbing cards were seen but the hands did not meet the requirements to play it
+    Will return details of:
+     - Count of hands that were ideal without gambling
+     - Count of hands that were "rescued" with gambling
+     - Most "useful" gambling cards
+     - Number of times gambling cards were seen but the hands did not meet the requirements to play it
     """
     matches_without = hand_is_wild(hand, ideal_hands, card_database)
     matches_with = matches_without
@@ -160,7 +160,7 @@ def run_test_hand_with_gambling(
     discardable = [
         c for c in hand
         for field, value in discard_requirements
-        if card_database.get(int(c), {}).get(field) == value
+        if card_database.get(c, {}).get(field) == value
     ]
     if not discardable:
         return matches_without, matches_with
@@ -173,7 +173,7 @@ def run_test_hand_with_gambling(
 
     # Draw cards
     num_to_draw = spec.get("draw", 0)
-    if len(remaining_deck) - num_to_draw:   # Cannot Pot of Greed with 1 card in deck
+    if len(remaining_deck) < num_to_draw:   # Cannot Pot of Greed with insufficient deck
         return matches_without, matches_with
 
     drawn_cards = random.sample(remaining_deck, num_to_draw)
@@ -182,7 +182,7 @@ def run_test_hand_with_gambling(
     # Remove one discardable card (first match)
     for c in new_hand:
         for field, value in discard_requirements:
-            info = card_database.get(int(c))
+            info = card_database.get(c)
             if info and info.get(field) == value:
                 new_hand.remove(c)
                 break
@@ -200,13 +200,14 @@ def run_test_hand_with_gambling(
 def simple_consistency(
     deckcount: int,
     ratios: Sequence[int],
-    names: Sequence[int | str],
-    ideal_hands: Sequence[Sequence[int | str]],
+    names: Sequence[int],
+    ideal_hands: Sequence[Sequence[int]],
     hand_checker: callable,
     num_hands: int = 1_000_000,
 ) -> ConsistencyResult:
-    """Estimate probability that a random 5-card (and 6-card) hand matches an ideal hand."""
-
+    """
+    Estimate probability that a random 5-card (and 6-card) hand matches an ideal hand.
+    """
     # Make local copies to avoid mutation of originals
     ratios = ratios.copy()
     names = names.copy()
@@ -214,21 +215,20 @@ def simple_consistency(
     # Validate size & fill deck to deck count with blanks
     blanks = deckcount - sum(ratios)
     if blanks < 0:
-        raise InvalidCardCountsError("Ratios add up to more than Deck Count")
+        raise InvalidCardCountsError("Ratios add up to more than deck count")
     if blanks > 0:
         ratios.append(blanks)
-        names.append(00000000)
+        names.append(0)  # Blank card sentinel
 
     # Build deck
-    deck: List[str] = [
+    deck: List[int] = [
         card for name, count in zip(names, ratios) for card in [name] * count
     ]
     deckcount = len(deck)
 
     # Precompute ideal hand counters for efficiency
     ideal_counters: List[Counter] = [
-        Counter(pattern) for pattern in ideal_hands
-    ]
+        Counter(pattern) for pattern in ideal_hands]
 
     good_5 = 0
     good_6 = 0
@@ -246,6 +246,6 @@ def simple_consistency(
                 good_6 += 1
 
     p5 = good_5 / num_hands
-    p6 = good_6 / num_hands if len(deck) >= 6 else 0.0
+    p6 = good_6 / num_hands if deckcount >= 6 else 0.0
 
     return ConsistencyResult(p5, p6)
