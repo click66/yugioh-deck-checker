@@ -83,7 +83,7 @@ def lambda_handler(event, context):
                 gambling_cards=GAMBLING_CARDS,
             ) if use_gambling else hand_is_wild(
                 hand=hand,
-                ideal_hands=ideal_hands,
+                ideal_hands=ideal_counters,
                 card_database=card_database,
             )
 
