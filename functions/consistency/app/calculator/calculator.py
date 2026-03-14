@@ -238,8 +238,16 @@ def simple_consistency(
     logger.info("Fully computed deck: %s", deck)
 
     # Precompute ideal hand counters for efficiency
-    ideal_counters: List[Counter] = [
-        Counter(pattern) for pattern in ideal_hands]
+    def normalize_pattern(pattern):
+        normalized = []
+        for c in pattern:
+            if isinstance(c, str) and c.startswith("any_"):
+                normalized.append(c)
+            else:
+                normalized.append(int(c))  # force exact cards to int
+        return normalized
+
+    ideal_counters = [Counter(normalize_pattern(p)) for p in ideal_hands]
 
     good_5 = 0
     good_6 = 0
