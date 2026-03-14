@@ -1,9 +1,16 @@
 import pytest
+
 from app.calculator.calculator import simple_consistency, hand_is_good
 from app.calculator.exceptions import InvalidCardCountsError
+from app.calculator.result import HandTestResult
 
 
-def hand_tester(_, hand, ideal_hands): return hand_is_good(hand, ideal_hands)
+def hand_tester(_, hand, ideal_hands):
+    result = hand_is_good(hand, ideal_hands)
+    return HandTestResult(
+        matches_without_gambling=result,
+        matches_with_gambling=result,
+    )
 
 
 def test_consistency_basic_integer_cards():

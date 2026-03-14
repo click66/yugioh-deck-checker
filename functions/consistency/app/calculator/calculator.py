@@ -147,36 +147,57 @@ def run_test_hand_with_gambling(
     remaining_deck: list[int],
     gambling_cards: GamblingCards,
 ) -> HandTestResult:
-    logger.info("Checking hand: %s", hand)
+    """
+    Run a hand with gambling logic and track detailed metrics:
+    - matches_without_gambling: whether hand matches ideal hands without gambling
+    - matches_with_gambling: whether hand matches ideal hands after gambling
+    - rescued_with_gambling: 1 if gambling rescued the hand, 0 otherwise
+    - useful_gambles: Counter of gamble cards that rescued a hand
+    - gamble_seen: Counter of gamble cards seen in the hand
+    - gamble_attempted: number of gamble cards attempted
+    - gamble_failed: number of gambles attempted that did not rescue the hand
+    - gamble_unplayable: number of gambles present but could not be played
+    """
 
-    # Check without gambling first
     matches_without = hand_checker(hand, ideal_hands, card_database)
     matches_with = matches_without
+
     rescued_with_gambling = 0
     useful_gambles: Counter[int] = Counter()
-    failed_gamble_attempts = 0
+    gamble_seen: Counter[int] = Counter()
+    gamble_attempted = 0
+    gamble_failed = 0
+    gamble_unplayable = 0
 
     if matches_without:
+        # No gambling needed
         return HandTestResult(
             matches_without_gambling=matches_without,
             matches_with_gambling=matches_with,
             rescued_with_gambling=rescued_with_gambling,
             useful_gambles=useful_gambles,
-            failed_gamble_attempts=failed_gamble_attempts
+            gamble_seen=gamble_seen,
+            gamble_attempted=gamble_attempted,
+            gamble_failed=gamble_failed,
+            gamble_unplayable=gamble_unplayable,
         )
 
     # Try to use gamble only if present
     gamble_card = next((c for c in hand if c in gambling_cards), None)
     if gamble_card is None:
-        logger.info("No gamble card in hand: %s", hand)
-        failed_gamble_attempts += 1
         return HandTestResult(
             matches_without_gambling=matches_without,
             matches_with_gambling=matches_with,
             rescued_with_gambling=rescued_with_gambling,
             useful_gambles=useful_gambles,
-            failed_gamble_attempts=failed_gamble_attempts
+            gamble_seen=gamble_seen,
+            gamble_attempted=gamble_attempted,
+            gamble_failed=gamble_failed,
+            gamble_unplayable=gamble_unplayable,
         )
+
+    # Track that we saw the gamble card
+    gamble_seen[gamble_card] += 1
 
     spec = gambling_cards[gamble_card]
     discard_requirements = spec.get("discard", [])
@@ -187,41 +208,41 @@ def run_test_hand_with_gambling(
         for field, value in discard_requirements
         if card_database.get(c, {}).get(field) == value
     ]
-    if not discardable:
-        logger.info("No discardable cards for gamble %s in hand %s",
-                    gamble_card, hand)
-        failed_gamble_attempts += 1
+    if discardable is None or not discardable:
+        gamble_unplayable += 1
         return HandTestResult(
             matches_without_gambling=matches_without,
             matches_with_gambling=matches_with,
             rescued_with_gambling=rescued_with_gambling,
             useful_gambles=useful_gambles,
-            failed_gamble_attempts=failed_gamble_attempts
+            gamble_seen=gamble_seen,
+            gamble_attempted=gamble_attempted,
+            gamble_failed=gamble_failed,
+            gamble_unplayable=gamble_unplayable,
         )
 
     # Simulate resolving exactly ONE gamble
     new_hand = list(hand)
-    new_hand.remove(gamble_card)  # activate the gamble
-    logger.info("Activated gamble card %s, hand now: %s",
-                gamble_card, new_hand)
+    new_hand.remove(gamble_card)
 
-    # Draw cards
     num_to_draw = spec.get("draw", 0)
     if len(remaining_deck) < num_to_draw:
-        logger.info("Not enough cards in deck to draw %d for gamble %s",
-                    num_to_draw, gamble_card)
-        failed_gamble_attempts += 1
+        gamble_unplayable += 1
         return HandTestResult(
             matches_without_gambling=matches_without,
             matches_with_gambling=matches_with,
             rescued_with_gambling=rescued_with_gambling,
             useful_gambles=useful_gambles,
-            failed_gamble_attempts=failed_gamble_attempts
+            gamble_seen=gamble_seen,
+            gamble_attempted=gamble_attempted,
+            gamble_failed=gamble_failed,
+            gamble_unplayable=gamble_unplayable,
         )
+
+    gamble_attempted += 1
 
     drawn_cards = random.sample(remaining_deck, num_to_draw)
     new_hand.extend(drawn_cards)
-    logger.info("Drew cards %s, new hand: %s", drawn_cards, new_hand)
 
     # Remove one discardable card (first match)
     for c in new_hand:
@@ -229,8 +250,6 @@ def run_test_hand_with_gambling(
             info = card_database.get(c)
             if info and info.get(field) == value:
                 new_hand.remove(c)
-                logger.info(
-                    "Discarded card %s to satisfy gamble requirement", c)
                 break
         else:
             continue
@@ -241,17 +260,18 @@ def run_test_hand_with_gambling(
         matches_with = True
         rescued_with_gambling = 1
         useful_gambles[gamble_card] += 1
-        logger.info("Hand %s matches after gambling", new_hand)
     else:
-        logger.info("Hand %s still does not match after gambling", new_hand)
-        failed_gamble_attempts += 1
+        gamble_failed += 1
 
     return HandTestResult(
         matches_without_gambling=matches_without,
         matches_with_gambling=matches_with,
         rescued_with_gambling=rescued_with_gambling,
         useful_gambles=useful_gambles,
-        failed_gamble_attempts=failed_gamble_attempts
+        gamble_seen=gamble_seen,
+        gamble_attempted=gamble_attempted,
+        gamble_failed=gamble_failed,
+        gamble_unplayable=gamble_unplayable,
     )
 
 
@@ -282,16 +302,20 @@ def simple_consistency(
     deck: list[int] = [int(card) for name, count in zip(
         names, ratios) for card in [name] * count]
     deckcount = len(deck)
-    logger.info("Fully computed deck: %s", deck)
 
     def normalize_pattern(pattern):
         return [c if isinstance(c, str) and c.startswith("any_") else int(c) for c in pattern]
 
     ideal_counters = [Counter(normalize_pattern(p)) for p in ideal_hands]
 
+    # Initialize metrics
     good_5 = good_6 = rescued_5 = rescued_6 = 0
-    useful_gambles: Counter[int] = Counter()
     failed_gambles_5 = failed_gambles_6 = 0
+    unplayable_gambles_5 = unplayable_gambles_6 = 0
+    gamble_attempted_5 = gamble_attempted_6 = 0
+    gamble_seen_5: Counter[int] = Counter()
+    gamble_seen_6: Counter[int] = Counter()
+    useful_gambles: Counter[int] = Counter()
 
     for _ in range(num_hands):
         # 5-card hand
@@ -299,14 +323,18 @@ def simple_consistency(
         remaining_deck_5 = deck.copy()
         for card in hand5:
             remaining_deck_5.remove(card)
+
         result5: HandTestResult = hand_tester(
             remaining_deck_5, hand5, ideal_counters)
         if result5.matches_without_gambling:
             good_5 += 1
         if result5.rescued_with_gambling:
             rescued_5 += 1
+        failed_gambles_5 += result5.gamble_failed
+        unplayable_gambles_5 += result5.gamble_unplayable
+        gamble_attempted_5 += result5.gamble_attempted
+        gamble_seen_5.update(result5.gamble_seen)
         useful_gambles.update(result5.useful_gambles)
-        failed_gambles_5 += result5.failed_gamble_attempts
 
         # 6-card hand
         if deckcount >= 6:
@@ -314,30 +342,53 @@ def simple_consistency(
             remaining_deck_6 = deck.copy()
             for card in hand6:
                 remaining_deck_6.remove(card)
+
             result6: HandTestResult = hand_tester(
                 remaining_deck_6, hand6, ideal_counters)
             if result6.matches_without_gambling:
                 good_6 += 1
             if result6.rescued_with_gambling:
                 rescued_6 += 1
+            failed_gambles_6 += result6.gamble_failed
+            unplayable_gambles_6 += result6.gamble_unplayable
+            gamble_attempted_6 += result6.gamble_attempted
+            gamble_seen_6.update(result6.gamble_seen)
             useful_gambles.update(result6.useful_gambles)
-            failed_gambles_6 += result6.failed_gamble_attempts
 
     p5 = good_5 / num_hands
     p6 = good_6 / num_hands if deckcount >= 6 else 0.0
+    p5_with_gambling = (good_5 + rescued_5) / num_hands
+    p6_with_gambling = (good_6 + rescued_6) / \
+        num_hands if deckcount >= 6 else 0.0
 
-    logger.info("5-card success probability: %.6f, rescued: %d", p5, rescued_5)
-    logger.info("6-card success probability: %.6f, rescued: %d", p6, rescued_6)
+    logger.info("5-card success probability: %.6f (without), %.6f (with), rescued: %d",
+                p5, p5_with_gambling, rescued_5)
+    logger.info("6-card success probability: %.6f (without), %.6f (with), rescued: %d",
+                p6, p6_with_gambling, rescued_6)
     logger.info("Useful gamble cards across all hands: %s", useful_gambles)
+    logger.info("Gamble cards seen: 5-card=%s, 6-card=%s",
+                gamble_seen_5, gamble_seen_6)
+    logger.info("Gamble attempts: 5-card=%d, 6-card=%d",
+                gamble_attempted_5, gamble_attempted_6)
     logger.info("Failed gamble attempts: 5-card=%d, 6-card=%d",
                 failed_gambles_5, failed_gambles_6)
+    logger.info("Unplayable gamble cards: 5-card=%d, 6-card=%d",
+                unplayable_gambles_5, unplayable_gambles_6)
 
     return ConsistencyResult(
         p5=p5,
         p6=p6,
+        p5_with_gambling=p5_with_gambling,
+        p6_with_gambling=p6_with_gambling,
         rescued_5=rescued_5,
         rescued_6=rescued_6,
         useful_gambles=useful_gambles,
+        gamble_seen_5=gamble_seen_5,
+        gamble_seen_6=gamble_seen_6,
+        gamble_attempted_5=gamble_attempted_5,
+        gamble_attempted_6=gamble_attempted_6,
         failed_gambles_5=failed_gambles_5,
-        failed_gambles_6=failed_gambles_6
+        failed_gambles_6=failed_gambles_6,
+        unplayable_gambles_5=unplayable_gambles_5,
+        unplayable_gambles_6=unplayable_gambles_6
     )
