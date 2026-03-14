@@ -1,4 +1,5 @@
 import os
+from collections import Counter as C
 from typing import Counter
 
 import boto3
@@ -132,35 +133,18 @@ def lambda_handler(event, context):
         result_dict = {k: getattr(result, k)
                        for k in result.__dataclass_fields__}
 
-        # Include all metrics, renamed for clarity if needed
-        combined_result = {
-            "p5": result_dict.get("p5"),
-            "p6": result_dict.get("p6"),
-            "rescued_5": result_dict.get("rescued_5"),
-            "rescued_6": result_dict.get("rescued_6"),
-            "failed_gambles_5": result_dict.get("failed_gambles_5"),
-            "failed_gambles_6": result_dict.get("failed_gambles_6"),
-            # Counter -> dict
-            "useful_gambles": dict(result_dict.get("useful_gambles", {})),
-        }
-
-        # Add optional extended metrics for full insight
-        # These depend on HandTestResult being returned by your hand_tester
-        if hasattr(result, "gamble_seen_5"):
-            combined_result.update({
-                "gamble_seen_5": dict(result.gamble_seen_5),
-                "gamble_seen_6": dict(result.gamble_seen_6),
-                "gamble_attempted_5": result.gamble_attempted_5,
-                "gamble_attempted_6": result.gamble_attempted_6,
-                "gamble_failed_5": result.gamble_failed_5,
-                "gamble_failed_6": result.gamble_failed_6,
-                "gamble_unplayable_5": result.gamble_unplayable_5,
-                "gamble_unplayable_6": result.gamble_unplayable_6,
-            })
+        # Convert all Counters to dicts for DynamoDB
+        serialized_result = {}
+        for key, value in result_dict.items():
+            if isinstance(value, C):
+                serialized_result[key] = dict(value)
+            else:
+                serialized_result[key] = value
 
         update_expression += ", #r = :result"
         expression_attr_names["#r"] = "result"
-        expression_attr_values[":result"] = _serialize_result(combined_result)
+        expression_attr_values[":result"] = _serialize_result(
+            serialized_result)
 
     dynamodb.update_item(
         TableName=TABLE_NAME,
