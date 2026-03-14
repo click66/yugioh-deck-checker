@@ -84,8 +84,6 @@ def hand_is_wild(
             pattern, Counter) else Counter(pattern)
         remaining_attrs: Counter = Counter()
 
-        logger.info("Comparing hand %s against pattern %s", hand, pat_counter)
-
         # Check each card in the pattern
         for card, count in pat_counter.items():
             if isinstance(card, str) and card.startswith("any_"):
@@ -93,36 +91,27 @@ def hand_is_wild(
                 _, field, value = card.split("_", 2)
                 available = attr_counter.get(
                     (field, value), 0) + remaining_attrs.get((field, value), 0)
-                logger.info(
-                    "Checking wildcard %s: need %d, available %d", card, count, available)
                 if available < count:
-                    logger.info("Wildcard %s failed", card)
                     return False
             else:
                 # exact-card logic
                 card_info = card_database.get(card)
                 if card_info is None:
-                    logger.info("Exact card %s not in database", card)
                     return False
                 if hand_counter.get(card, 0) < count:
-                    logger.info(
-                        "Hand missing %d of exact card %s", count, card)
                     return False
                 # track remaining attributes for wildcards
                 for field, value in card_info.items():
                     if value is not None:
                         remaining_attrs[(field, value)] -= count
 
-        logger.info("Pattern matched: %s", pat_counter)
         return True
 
     # Return True if any pattern matches
     for pattern in ideal_hands:
         if match_pattern(pattern):
-            logger.info("Hand %s matches pattern %s", hand, pattern)
             return True
 
-    logger.info("Hand %s did not match any pattern", hand)
     return False
 
 
@@ -366,20 +355,6 @@ def simple_consistency(
     p5_with_gambling = (good_5 + rescued_5) / num_hands
     p6_with_gambling = (good_6 + rescued_6) / \
         num_hands if deckcount >= 6 else 0.0
-
-    logger.info("5-card success probability: %.6f (without), %.6f (with), rescued: %d",
-                p5, p5_with_gambling, rescued_5)
-    logger.info("6-card success probability: %.6f (without), %.6f (with), rescued: %d",
-                p6, p6_with_gambling, rescued_6)
-    logger.info("Useful gamble cards across all hands: %s", useful_gambles)
-    logger.info("Gamble cards seen: 5-card=%s, 6-card=%s",
-                gamble_seen_5, gamble_seen_6)
-    logger.info("Gamble attempts: 5-card=%d, 6-card=%d",
-                gamble_attempted_5, gamble_attempted_6)
-    logger.info("Failed gamble attempts: 5-card=%d, 6-card=%d",
-                failed_gambles_5, failed_gambles_6)
-    logger.info("Unplayable gamble cards: 5-card=%d, 6-card=%d",
-                unplayable_gambles_5, unplayable_gambles_6)
 
     return ConsistencyResult(
         p5=p5,
