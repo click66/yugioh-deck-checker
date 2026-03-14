@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - feature/gambling-debugging
 
 permissions:
   id-token: write
