@@ -1,4 +1,6 @@
 import os
+from typing import Counter
+
 import boto3
 import logging
 import json
@@ -8,6 +10,7 @@ from app.calculator.calculator import (
     run_test_hand_with_gambling,
     CardDatabase,
 )
+from app.calculator.result import HandTestResult
 
 logger = logging.getLogger()
 logger.setLevel("INFO")
@@ -79,18 +82,30 @@ def lambda_handler(event, context):
     try:
         # Always use run_test_hand_with_gambling for consistency checks
         def hand_tester(remaining_deck, hand, ideal_counters):
-            return run_test_hand_with_gambling(
-                hand_checker=hand_is_wild,
-                hand=hand,
-                ideal_hands=ideal_counters,
-                card_database=card_database,
-                remaining_deck=remaining_deck,
-                gambling_cards=GAMBLING_CARDS,
-            ) if use_gambling else hand_is_wild(
-                hand=hand,
-                ideal_hands=ideal_counters,
-                card_database=card_database,
-            )
+            if use_gambling:
+                # Returns a full HandTestResult with gambling metrics
+                return run_test_hand_with_gambling(
+                    hand_checker=hand_is_wild,
+                    hand=hand,
+                    ideal_hands=ideal_counters,
+                    card_database=card_database,
+                    remaining_deck=remaining_deck,
+                    gambling_cards=GAMBLING_CARDS,
+                )
+            else:
+                # Wrap boolean return in HandTestResult with defaults for gambling stats
+                result = hand_is_wild(
+                    hand=hand,
+                    ideal_hands=ideal_counters,
+                    card_database=card_database,
+                )
+                return HandTestResult(
+                    matches_without_gambling=result,
+                    matches_with_gambling=result,
+                    rescued_with_gambling=0,
+                    useful_gambles=Counter(),
+                    failed_gamble_attempts=0,
+                )
 
         result = simple_consistency(
             deckcount=deckcount,
