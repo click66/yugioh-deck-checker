@@ -53,7 +53,7 @@ def _serialize_result(result):
         return {"S": str(result)}
 
 
-def lambda_handler(event, context):
+def event_handler(event, context):
     job_id = event.get("job_id")
     deckcount = event["deckcount"]
     names = event["names"]
@@ -175,3 +175,21 @@ def lambda_handler(event, context):
     )
 
     logger.info(f"Job {job_id} processed. Result written to job registry.")
+
+
+def lambda_handler(event, context):
+    """
+    SQS-compatible wrapper that calls the existing event_handler.
+    Logs full payload for debugging.
+    """
+    for record in event.get("Records", []):
+        try:
+            payload = json.loads(record["body"])
+            logger.info(
+                f"Received new job: {json.dumps(payload, indent=2)}")
+
+            event_handler(payload)
+
+        except Exception as e:
+            logger.error(f"Failed to process SQS record: {record}")
+            logger.exception(e)

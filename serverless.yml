@@ -70,6 +70,10 @@ functions:
       name: consistency
     environment:
       ENV_PREFIX: "${self:service}-${opt:stage, self:provider.stage, 'prod'}"
+    events:
+      - sqs:
+          arn: !GetAtt JobQueue.Arn
+          batchSize: 1
     timeout: 300
     reservedConcurrency: 10 # limit async jobs triggered
 
