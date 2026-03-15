@@ -5,7 +5,27 @@ import { useCardDatabase } from './hooks/useCardDatabase'
 import { DeckRow } from './components/dca/deck-row'
 import { parseYdk } from './services/ydk-import'
 import type { DeckLine, Card, Wildcard } from './types/deck'
+import { InformationCircleIcon } from '@heroicons/react/16/solid'
 
+function InfoTooltip({ content }: { content: string }) {
+    const [visible, setVisible] = useState(false)
+
+    return (
+        <div className="relative inline-block ml-1">
+            <InformationCircleIcon
+                className="w-4 h-4 text-gray-400 hover:text-gray-600 cursor-pointer"
+                onMouseEnter={() => setVisible(true)}
+                onMouseLeave={() => setVisible(false)}
+                onClick={() => setVisible((v) => !v)}
+            />
+            {visible && (
+                <div className="absolute z-10 w-64 p-2 bg-gray-700 text-white text-xs rounded shadow-lg mt-1 -left-32 sm:left-0">
+                    {content}
+                </div>
+            )}
+        </div>
+    )
+}
 const loadingMessages = [
     'Shuffling the deck',
     'Drawing opening hands',
@@ -15,11 +35,20 @@ const loadingMessages = [
     'Calculating probabilities',
     'Recreating perfectly quaffed hair',
     'Running probability scenarios',
-    "Stacking the deck myself so there's no one else to blame",
+    'Stacking the deck',
     'Postulating a winning strategem',
     'Initiating duel simulation',
     'Calculating player strength',
-    'Performing quantum analysis',
+    'Performing quantum duel analysis',
+    'Scanning for dead draws',
+    'Activating Pot of Greed',
+    'Scanning for pathetic cards',
+    'Calculating brick percentages',
+    'Linking into the VRAINS',
+    'Simulating first turn plays',
+    'Searching for Habikiri',
+    'Running Monte Carlo simulation',
+    'Evaluating effects of deck thinning',
 ]
 
 const wildcardOptions: Wildcard[] = [
@@ -67,7 +96,8 @@ export default function App() {
     const [job, setJob] = useState<ConsistencyJobResponse | null>(null)
     const [loading, setLoading] = useState(false)
     const [loadingMessage, setLoadingMessage] = useState(
-        loadingMessages[Math.floor(Math.random() * loadingMessages.length)],
+        loadingMessages[Math.floor(Math.random() * loadingMessages.length)] +
+            '...',
     )
     const [error, setError] = useState<string | null>(null)
     const [useGambling, setUseGambling] = useState(false)
@@ -86,7 +116,7 @@ export default function App() {
             setLoadingMessage(
                 loadingMessages[
                     Math.floor(Math.random() * loadingMessages.length)
-                ],
+                ] + '...',
             )
         }, 5000)
         return () => clearInterval(interval)
@@ -217,7 +247,7 @@ export default function App() {
             <div className="bg-gray-50 py-10">
                 <div className="max-w-3xl mx-auto space-y-6">
                     <h1 className="text-3xl font-semibold text-center text-gray-800">
-                        Yu-Gi-Oh! Deck Consistency Analysis
+                        Yu-Gi-Oh! Deck Analysis
                     </h1>
                     <p className="px-2">
                         A tool for estimating a deck's consistency at drawing
@@ -249,6 +279,19 @@ export default function App() {
             </div>
             <footer className="w-full bg-gray-100 border-t border-gray-300 mt-10">
                 <div className="max-w-3xl mx-auto text-center text-gray-700 space-y-1 py-4 px-3 text-sm">
+                    <p className="mb-4">
+                        This is a beta tool and as such bugs may be present. The
+                        simulator is naive and is not guaranteed to play hands
+                        perfectly. If you find any issues or have suggestions
+                        for improvement, feel free to{' '}
+                        <a
+                            className="text-blue-600 hover:underline"
+                            href="mailto:click66@gmail.com"
+                        >
+                            email me
+                        </a>
+                        .
+                    </p>
                     <p>
                         Adapted from code championed and shared by{' '}
                         <a
@@ -529,7 +572,7 @@ function Step2({ expanded, toggle, handProps, setExpandedSteps }: any) {
 
             {showHandModal && (
                 <div
-                    className="fixed inset-0 bg-black/30 flex items-center justify-center p-4"
+                    className="fixed inset-0 bg-black/30 flex items-center justify-center p-4 z-50"
                     onClick={() => setShowHandModal(false)}
                 >
                     <div
@@ -657,8 +700,8 @@ function Step3({ expanded, toggle, analysisProps, children }: any) {
         useGambling,
         setUseGambling,
     } = analysisProps
-    const p5 = job?.result?.value ? parseFloat(job.result.value) : null
-    const p6 = job?.result?.value_6 ? parseFloat(job.result.value_6) : null
+
+    const { cards: cardDatabase } = useCardDatabase()
 
     return (
         <Panel
@@ -667,28 +710,35 @@ function Step3({ expanded, toggle, analysisProps, children }: any) {
             toggle={toggle}
             expandable={!loading}
         >
-            <div className="flex items-center gap-3 mb-4">
-                <input
-                    type="checkbox"
-                    id="use-gambling"
-                    checked={useGambling}
-                    onChange={(e) => setUseGambling(e.target.checked)}
-                    className="w-4 h-4"
-                />
-                <label htmlFor="use-gambling" className="text-gray-700">
-                    Use gambling?
-                </label>
-            </div>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mb-4">
+                {!loading && (
+                    <>
+                        <div className="flex items-center gap-2 order-0 sm:order-2">
+                            <label className="flex items-center gap-2 text-gray-700 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={useGambling}
+                                    onChange={(e) =>
+                                        setUseGambling(e.target.checked)
+                                    }
+                                    className="w-4 h-4"
+                                />
+                                Use gambling?
+                            </label>
 
-            {!loading && (
-                <button
-                    onClick={runAnalysis}
-                    disabled={hands.length === 0}
-                    className="px-5 py-2 bg-purple-500 text-white rounded disabled:opacity-50 "
-                >
-                    Run Analysis
-                </button>
-            )}
+                            <InfoTooltip content="Simulate cards that allow drawing extra cards, accounting for if those cards have discard requirements (e.g. Allure of Darkness). This may increase overall processing time and not all gambling cards may be supported." />
+                        </div>
+
+                        <button
+                            onClick={runAnalysis}
+                            disabled={hands.length === 0}
+                            className="px-5 py-2 bg-purple-500 text-white rounded hover:bg-purple-600"
+                        >
+                            Run Analysis
+                        </button>
+                    </>
+                )}
+            </div>
 
             {children}
 
@@ -706,34 +756,189 @@ function Step3({ expanded, toggle, analysisProps, children }: any) {
                     </div>
                 </div>
             )}
-
-            {p5 !== null && p6 !== null && (
-                <>
-                    <hr className="w-[70%] border-t border-gray-300 mx-auto my-6"></hr>
-                    <p className="text-center">
-                        Analysis complete; in 1 million hands, the percentage we
-                        saw one of your ideal hands was:
-                    </p>
-                    <div className="mt-4 flex flex-col sm:flex-row gap-4">
-                        <div className="flex-1 p-4 border rounded-lg bg-white shadow text-center">
-                            <div className="text-gray-500 mb-1">
-                                5-card hand
-                            </div>
-                            <div className="text-2xl font-bold text-purple-600">
-                                {(p5 * 100).toFixed(2)}%
-                            </div>
-                        </div>
-                        <div className="flex-1 p-4 border rounded-lg bg-white shadow text-center">
-                            <div className="text-gray-500 mb-1">
-                                6-card hand
-                            </div>
-                            <div className="text-2xl font-bold text-purple-600">
-                                {(p6 * 100).toFixed(2)}%
-                            </div>
-                        </div>
-                    </div>
-                </>
-            )}
+            {job?.result && <Results job={job} cardDatabase={cardDatabase} />}
         </Panel>
+    )
+}
+
+interface ResultsProps {
+    job: ConsistencyJobResponse
+    cardDatabase: Card[]
+}
+
+export function Results({ job, cardDatabase }: ResultsProps) {
+    if (!job?.result) return null
+
+    const numHands = 1_000_000
+    const usedGambling = job.result.used_gambling
+
+    const p5 = parseFloat(job.result.p5 || '0')
+    const p6 = parseFloat(job.result.p6 || '0')
+    const p5WithGambling = parseFloat(job.result.p5_with_gambling || '0')
+    const p6WithGambling = parseFloat(job.result.p6_with_gambling || '0')
+
+    const rescued5 = parseInt(job.result.rescued_5 || '0', 10)
+    const rescued6 = parseInt(job.result.rescued_6 || '0', 10)
+
+    const totalAttempts5 = parseInt(job.result.gamble_attempted_5 || '0', 10)
+    const totalAttempts6 = parseInt(job.result.gamble_attempted_6 || '0', 10)
+
+    const totalFailed5 = parseInt(job.result.gamble_failed_5 || '0', 10)
+    const totalFailed6 = parseInt(job.result.gamble_failed_6 || '0', 10)
+
+    const usefulGambles5 = job.result.useful_gambles_5 || {}
+    const usefulGambles6 = job.result.useful_gambles_6 || {}
+    const gambleSeen5 = job.result.gamble_seen_5 || {}
+    const gambleSeen6 = job.result.gamble_seen_6 || {}
+
+    const getCardName = (id: string) =>
+        cardDatabase.find((c) => `${c.id}` === id)?.name || id
+
+    const gamblingStats = [
+        {
+            title: '5-card hand',
+            rescued: rescued5,
+            attempts: totalAttempts5,
+            failed: totalFailed5,
+            seen: gambleSeen5,
+            usefulGambles: usefulGambles5,
+        },
+        {
+            title: '6-card hand',
+            rescued: rescued6,
+            attempts: totalAttempts6,
+            failed: totalFailed6,
+            seen: gambleSeen6,
+            usefulGambles: usefulGambles6,
+        },
+    ]
+
+    return (
+        <>
+            <hr className="w-[70%] border-t border-gray-300 mx-auto my-6" />
+            <p className="text-center mb-4">
+                Analysis complete; in {numHands.toLocaleString()} hands, the
+                probability of opening one of your ideal hands was:
+            </p>
+
+            <div className="mt-4 flex flex-col sm:flex-row gap-4">
+                <div className="flex-1 p-6 border rounded-lg bg-white shadow text-center">
+                    <div className="text-gray-500 mb-1">5-card hand</div>
+                    <div className="text-3xl font-bold text-purple-600">
+                        {(p5 * 100).toFixed(2)}%
+                    </div>
+                    {usedGambling && (
+                        <div className="text-gray-400 text-sm mt-2">
+                            With gambling: {(p5WithGambling * 100).toFixed(2)}%
+                        </div>
+                    )}
+                </div>
+                <div className="flex-1 p-6 border rounded-lg bg-white shadow text-center">
+                    <div className="text-gray-500 mb-1">6-card hand</div>
+                    <div className="text-3xl font-bold text-purple-600">
+                        {(p6 * 100).toFixed(2)}%
+                    </div>
+                    {usedGambling && (
+                        <div className="text-gray-400 text-sm mt-2">
+                            With gambling: {(p6WithGambling * 100).toFixed(2)}%
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {usedGambling && (
+                <div className="mt-6 space-y-4">
+                    {gamblingStats.map((stat) => {
+                        const gambledPercent = (
+                            (stat.attempts / numHands) *
+                            100
+                        ).toFixed(2)
+                        const rescuedPercent = (
+                            (stat.rescued / stat.attempts || 1) * 100
+                        ).toFixed(2)
+                        const failedPercent = (
+                            (stat.failed / stat.attempts || 1) * 100
+                        ).toFixed(2)
+
+                        return (
+                            <div
+                                key={stat.title}
+                                className="p-4 border rounded-lg bg-white shadow"
+                            >
+                                <div className="text-gray-600 font-medium mb-2">
+                                    {stat.title} Gambling Stats
+                                </div>
+                                {stat.attempts > 0 ? (
+                                    <>
+                                        <div className="flex flex-col sm:flex-row sm:gap-6 text-sm text-gray-700 mb-2">
+                                            <div>
+                                                Gambled on {gambledPercent}% of
+                                                hands; of which:
+                                            </div>
+                                            <div>
+                                                {rescuedPercent}% were rescued
+                                            </div>
+                                            <div>{failedPercent}% failed</div>
+                                        </div>
+
+                                        <div className="text-gray-500 text-sm font-medium mb-1">
+                                            Individual Cards:
+                                        </div>
+                                        <div className="flex flex-col gap-1 text-sm text-gray-700">
+                                            {Object.entries(stat.seen).map(
+                                                ([cardId, val]) => {
+                                                    const seen = parseInt(
+                                                        val,
+                                                        10,
+                                                    )
+                                                    const rescued = parseInt(
+                                                        stat.usefulGambles[
+                                                            cardId
+                                                        ] || '0',
+                                                        10,
+                                                    )
+                                                    const seenPct = (
+                                                        (seen / numHands) *
+                                                        100
+                                                    ).toFixed(2)
+                                                    const rescuedPct = (
+                                                        (rescued / seen) *
+                                                        100
+                                                    ).toFixed(2)
+                                                    return (
+                                                        <div
+                                                            key={cardId}
+                                                            className="flex justify-between"
+                                                        >
+                                                            <div>
+                                                                {getCardName(
+                                                                    cardId,
+                                                                )}
+                                                            </div>
+                                                            <div>
+                                                                Seen in{' '}
+                                                                {seenPct}% of
+                                                                hands; success
+                                                                rate:{' '}
+                                                                {rescuedPct}%
+                                                            </div>
+                                                        </div>
+                                                    )
+                                                },
+                                            )}
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="flex flex-col sm:flex-row sm:gap-6 text-sm text-gray-700 mb-2">
+                                        No gambling was attempted or no gambling
+                                        cards were seen.
+                                    </div>
+                                )}
+                            </div>
+                        )
+                    })}
+                </div>
+            )}
+        </>
     )
 }

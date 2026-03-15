@@ -1,4 +1,6 @@
 import os
+from typing import Counter
+
 import boto3
 import logging
 import json
@@ -6,8 +8,10 @@ from app.calculator.calculator import (
     hand_is_wild,
     simple_consistency,
     run_test_hand_with_gambling,
+    run_test_hand_without_gambling,
     CardDatabase,
 )
+from app.utils import build_card_attribute_index, compile_patterns
 
 logger = logging.getLogger()
 logger.setLevel("INFO")
@@ -28,6 +32,10 @@ GAMBLING_CARDS = {
     70368879: {  # Upstart Goblin
         "draw": 1,
         "discard": [],
+    },
+    20508881: {  # Radiant Typhoon Vision
+        "draw": 2,
+        "discard": [("race", "Quick-Play")],
     },
 }
 
@@ -60,40 +68,51 @@ def lambda_handler(event, context):
 
     logger.info("Reading card database...")
 
+    # Read and compile card database
     try:
         resp = s3.get_object(
             Bucket=CARD_DATABASE_BUCKET_NAME, Key=CARD_DATABASE_KEY)
         card_list = json.load(resp["Body"])
-        # Build database keyed by integer ID
         card_database: CardDatabase = {
             int(card["id"]): card for card in card_list}
+        card_attribute_index = build_card_attribute_index(card_database)
+        compiled_hands = compile_patterns(ideal_hands)
         logger.info("Card database loaded successfully from S3.")
     except Exception as e:
         logger.error(f"Failed to load card database from S3: {e}")
         card_database: CardDatabase = {}
+        card_attribute_index = []
+        compiled_hands = []
 
     try:
-        # Always use run_test_hand_with_gambling for consistency checks
-        def hand_checker(remaining_deck, hand, ideal_counters):
-            return run_test_hand_with_gambling(
-                hand=hand,
-                ideal_hands=ideal_counters,
-                card_database=card_database,
-                remaining_deck=remaining_deck,
-                gambling_cards=GAMBLING_CARDS,
-            ) if use_gambling else hand_is_wild(
-                hand=hand,
-                ideal_hands=ideal_counters,
-                card_database=card_database,
-            )
+        def hand_tester(remaining_deck, hand):
+            def hand_checker(hand, compiled=compiled_hands):
+                return hand_is_wild(
+                    hand,
+                    compiled,
+                    card_attribute_index,
+                )
+
+            if use_gambling:
+                return run_test_hand_with_gambling(
+                    hand_checker=hand_checker,
+                    hand=hand,
+                    card_attr_index=card_attribute_index,
+                    remaining_deck=remaining_deck,
+                    gambling_cards=GAMBLING_CARDS,
+                )
+            else:
+                return run_test_hand_without_gambling(
+                    hand_checker=hand_checker,
+                    hand=hand,
+                )
 
         result = simple_consistency(
             deckcount=deckcount,
             ratios=ratios,
             names=names,
-            ideal_hands=ideal_hands,
             num_hands=num_hands,
-            hand_checker=hand_checker,
+            hand_tester=hand_tester,
         )
         status = "completed"
     except Exception as e:
@@ -108,11 +127,39 @@ def lambda_handler(event, context):
     update_expression = "SET #s = :status"
 
     if result is not None:
+        # Convert the dataclass to a dict
         result_dict = {k: getattr(result, k)
                        for k in result.__dataclass_fields__}
+
+        # Convert Counters to string-keyed dicts for DynamoDB
+        def serialize_counter(counter: Counter[int]) -> dict:
+            return {str(k): v for k, v in counter.items()}
+
         combined_result = {
-            "value": str(result_dict["p5"]),
-            "value_6": str(result_dict["p6"]),
+            # Meta
+            "used_gambling": f"{int(use_gambling)}",
+
+            # Probabilities
+            "p5": result_dict["p5"],
+            "p6": result_dict["p6"],
+            "p5_with_gambling": result_dict["p5_with_gambling"],
+            "p6_with_gambling": result_dict["p6_with_gambling"],
+
+            # Rescued hands
+            "rescued_5": result_dict["rescued_5"],
+            "rescued_6": result_dict["rescued_6"],
+
+            # Gamble metrics
+            "useful_gambles_5": serialize_counter(result_dict.get("useful_gambles_5", Counter())),
+            "useful_gambles_6": serialize_counter(result_dict.get("useful_gambles_6", Counter())),
+            "gamble_seen_5": serialize_counter(result_dict.get("gamble_seen_5", Counter())),
+            "gamble_seen_6": serialize_counter(result_dict.get("gamble_seen_6", Counter())),
+            "gamble_attempted_5": result_dict.get("gamble_attempted_5", 0),
+            "gamble_attempted_6": result_dict.get("gamble_attempted_6", 0),
+            "gamble_failed_5": result_dict.get("failed_gambles_5", 0),
+            "gamble_failed_6": result_dict.get("failed_gambles_6", 0),
+            "gamble_unplayable_5": result_dict.get("unplayable_gambles_5", 0),
+            "gamble_unplayable_6": result_dict.get("unplayable_gambles_6", 0),
         }
 
         update_expression += ", #r = :result"
