@@ -6,6 +6,7 @@ import logging
 import json
 from app.calculator.calculator import (
     hand_is_wild,
+    hand_is_wild_attr_index,
     simple_consistency,
     run_test_hand_with_gambling,
     run_test_hand_without_gambling,
@@ -53,6 +54,19 @@ def _serialize_result(result):
         return {"S": str(result)}
 
 
+def _build_card_attribute_index(card_database: CardDatabase) -> dict[int, Counter]:
+    index: dict[int, Counter] = {}
+
+    for card_id, info in card_database.items():
+        c = Counter()
+        for field, value in info.items():
+            if value is not None:
+                c[(field, value)] += 1
+        index[card_id] = c
+
+    return index
+
+
 def lambda_handler(event, context):
     job_id = event.get("job_id")
     deckcount = event["deckcount"]
@@ -75,6 +89,7 @@ def lambda_handler(event, context):
         # Build database keyed by integer ID
         card_database: CardDatabase = {
             int(card["id"]): card for card in card_list}
+        card_attribute_index = _build_card_attribute_index(card_database)
         logger.info("Card database loaded successfully from S3.")
     except Exception as e:
         logger.error(f"Failed to load card database from S3: {e}")
@@ -83,10 +98,17 @@ def lambda_handler(event, context):
     try:
         # Always use run_test_hand_with_gambling for consistency checks
         def hand_tester(remaining_deck, hand, ideal_counters):
+            def hand_checker(hand, ideal_hands, _):
+                return hand_is_wild_attr_index(
+                    hand,
+                    ideal_hands,
+                    card_attribute_index,
+                )
+                
             if use_gambling:
                 # Returns a full HandTestResult with gambling metrics
                 return run_test_hand_with_gambling(
-                    hand_checker=hand_is_wild,
+                    hand_checker=hand_checker,
                     hand=hand,
                     ideal_hands=ideal_counters,
                     card_database=card_database,
@@ -95,7 +117,7 @@ def lambda_handler(event, context):
                 )
             else:
                 return run_test_hand_without_gambling(
-                    hand_checker=hand_is_wild,
+                    hand_checker=hand_checker,
                     hand=hand,
                     ideal_hands=ideal_counters,
                     card_database=card_database,
