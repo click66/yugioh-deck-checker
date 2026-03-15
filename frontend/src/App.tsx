@@ -274,7 +274,13 @@ export default function App() {
                         simulator is naive and is not guaranteed to play hands
                         perfectly. If you find any issues or have suggestions
                         for improvement, feel free to{' '}
-                        <a className="text-blue-600 hover:underline" href="mailto:click66@gmail.com">email me</a>.
+                        <a
+                            className="text-blue-600 hover:underline"
+                            href="mailto:click66@gmail.com"
+                        >
+                            email me
+                        </a>
+                        .
                     </p>
                     <p>
                         Adapted from code championed and shared by{' '}
@@ -695,36 +701,34 @@ function Step3({ expanded, toggle, analysisProps, children }: any) {
             expandable={!loading}
         >
             <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mb-4">
-                <div className="flex items-center gap-2 order-0 sm:order-2">
-                    <label className="flex items-center gap-2 text-gray-700 cursor-pointer">
-                        <input
-                            type="checkbox"
-                            checked={useGambling}
-                            onChange={(e) => setUseGambling(e.target.checked)}
-                            className="w-4 h-4"
-                        />
-                        Use gambling?
-                    </label>
+                {!loading && (
+                    <>
+                        <div className="flex items-center gap-2 order-0 sm:order-2">
+                            <label className="flex items-center gap-2 text-gray-700 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={useGambling}
+                                    onChange={(e) =>
+                                        setUseGambling(e.target.checked)
+                                    }
+                                    className="w-4 h-4"
+                                />
+                                Use gambling?
+                            </label>
 
-                    <InfoTooltip content="Simulate cards that allow drawing extra cards, accounting for if those cards have discard requirements (e.g Allure of Darkness). This may increase overall processing time and not all gambling cards may be supported." />
-                </div>
+                            <InfoTooltip content="Simulate cards that allow drawing extra cards, accounting for if those cards have discard requirements (e.g. Allure of Darkness). This may increase overall processing time and not all gambling cards may be supported." />
+                        </div>
 
-                <button
-                    onClick={runAnalysis}
-                    disabled={hands.length === 0}
-                    className="px-5 py-2 bg-purple-500 text-white rounded disabled:opacity-50 whitespace-nowrap order-1 sm:order-1"
-                >
-                    Run Analysis
-                </button>
+                        <button
+                            onClick={runAnalysis}
+                            disabled={hands.length === 0}
+                            className="px-5 py-2 bg-purple-500 text-white rounded hover:bg-purple-600"
+                        >
+                            Run Analysis
+                        </button>
+                    </>
+                )}
             </div>
-            {!loading && (
-                <button
-                    onClick={runAnalysis}
-                    className="px-5 py-2 bg-purple-500 text-white rounded hover:bg-purple-600"
-                >
-                    Run Analysis
-                </button>
-            )}
 
             {children}
 
@@ -756,6 +760,7 @@ export function Results({ job, cardDatabase }: ResultsProps) {
     if (!job?.result) return null
 
     const numHands = 1_000_000
+    const usedGambling = job.result.used_gambling
 
     const p5 = parseFloat(job.result.p5 || '0')
     const p6 = parseFloat(job.result.p6 || '0')
@@ -812,89 +817,118 @@ export function Results({ job, cardDatabase }: ResultsProps) {
                     <div className="text-3xl font-bold text-purple-600">
                         {(p5 * 100).toFixed(2)}%
                     </div>
-                    <div className="text-gray-400 text-sm mt-2">
-                        With gambling: {(p5WithGambling * 100).toFixed(2)}%
-                    </div>
+                    {usedGambling && (
+                        <div className="text-gray-400 text-sm mt-2">
+                            With gambling: {(p5WithGambling * 100).toFixed(2)}%
+                        </div>
+                    )}
                 </div>
                 <div className="flex-1 p-6 border rounded-lg bg-white shadow text-center">
                     <div className="text-gray-500 mb-1">6-card hand</div>
                     <div className="text-3xl font-bold text-purple-600">
                         {(p6 * 100).toFixed(2)}%
                     </div>
-                    <div className="text-gray-400 text-sm mt-2">
-                        With gambling: {(p6WithGambling * 100).toFixed(2)}%
-                    </div>
+                    {usedGambling && (
+                        <div className="text-gray-400 text-sm mt-2">
+                            With gambling: {(p6WithGambling * 100).toFixed(2)}%
+                        </div>
+                    )}
                 </div>
             </div>
 
-            <div className="mt-6 space-y-4">
-                {gamblingStats.map((stat) => {
-                    const gambledPercent = (
-                        (stat.attempts / numHands) *
-                        100
-                    ).toFixed(2)
-                    const rescuedPercent = (
-                        (stat.rescued / stat.attempts || 1) * 100
-                    ).toFixed(2)
-                    const failedPercent = (
-                        (stat.failed / stat.attempts || 1) * 100
-                    ).toFixed(2)
+            {usedGambling && (
+                <div className="mt-6 space-y-4">
+                    {gamblingStats.map((stat) => {
+                        const gambledPercent = (
+                            (stat.attempts / numHands) *
+                            100
+                        ).toFixed(2)
+                        const rescuedPercent = (
+                            (stat.rescued / stat.attempts || 1) * 100
+                        ).toFixed(2)
+                        const failedPercent = (
+                            (stat.failed / stat.attempts || 1) * 100
+                        ).toFixed(2)
 
-                    return (
-                        <div
-                            key={stat.title}
-                            className="p-4 border rounded-lg bg-white shadow"
-                        >
-                            <div className="text-gray-600 font-medium mb-2">
-                                {stat.title} Gambling Stats
-                            </div>
-                            <div className="flex flex-col sm:flex-row sm:gap-6 text-sm text-gray-700 mb-2">
-                                <div>
-                                    Gambled on {gambledPercent}% of hands; of
-                                    which:
+                        return (
+                            <div
+                                key={stat.title}
+                                className="p-4 border rounded-lg bg-white shadow"
+                            >
+                                <div className="text-gray-600 font-medium mb-2">
+                                    {stat.title} Gambling Stats
                                 </div>
-                                <div>{rescuedPercent}% were rescued</div>
-                                <div>{failedPercent}% failed</div>
-                            </div>
-
-                            <div className="text-gray-500 text-sm font-medium mb-1">
-                                Individual Cards:
-                            </div>
-                            <div className="flex flex-col gap-1 text-sm text-gray-700">
-                                {Object.entries(stat.seen).map(
-                                    ([cardId, val]) => {
-                                        const seen = parseInt(val, 10)
-                                        const rescued = parseInt(
-                                            stat.usefulGambles[cardId] || '0',
-                                            10,
-                                        )
-                                        const seenPct = (
-                                            (seen / numHands) *
-                                            100
-                                        ).toFixed(2)
-                                        const rescuedPct = (
-                                            (rescued / seen) *
-                                            100
-                                        ).toFixed(2)
-                                        return (
-                                            <div
-                                                key={cardId}
-                                                className="flex justify-between"
-                                            >
-                                                <div>{getCardName(cardId)}</div>
-                                                <div>
-                                                    Seen in {seenPct}% of hands;
-                                                    success rate: {rescuedPct}%
-                                                </div>
+                                {stat.attempts > 0 ? (
+                                    <>
+                                        <div className="flex flex-col sm:flex-row sm:gap-6 text-sm text-gray-700 mb-2">
+                                            <div>
+                                                Gambled on {gambledPercent}% of
+                                                hands; of which:
                                             </div>
-                                        )
-                                    },
+                                            <div>
+                                                {rescuedPercent}% were rescued
+                                            </div>
+                                            <div>{failedPercent}% failed</div>
+                                        </div>
+
+                                        <div className="text-gray-500 text-sm font-medium mb-1">
+                                            Individual Cards:
+                                        </div>
+                                        <div className="flex flex-col gap-1 text-sm text-gray-700">
+                                            {Object.entries(stat.seen).map(
+                                                ([cardId, val]) => {
+                                                    const seen = parseInt(
+                                                        val,
+                                                        10,
+                                                    )
+                                                    const rescued = parseInt(
+                                                        stat.usefulGambles[
+                                                            cardId
+                                                        ] || '0',
+                                                        10,
+                                                    )
+                                                    const seenPct = (
+                                                        (seen / numHands) *
+                                                        100
+                                                    ).toFixed(2)
+                                                    const rescuedPct = (
+                                                        (rescued / seen) *
+                                                        100
+                                                    ).toFixed(2)
+                                                    return (
+                                                        <div
+                                                            key={cardId}
+                                                            className="flex justify-between"
+                                                        >
+                                                            <div>
+                                                                {getCardName(
+                                                                    cardId,
+                                                                )}
+                                                            </div>
+                                                            <div>
+                                                                Seen in{' '}
+                                                                {seenPct}% of
+                                                                hands; success
+                                                                rate:{' '}
+                                                                {rescuedPct}%
+                                                            </div>
+                                                        </div>
+                                                    )
+                                                },
+                                            )}
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="flex flex-col sm:flex-row sm:gap-6 text-sm text-gray-700 mb-2">
+                                        No gambling was attempted or no gambling
+                                        cards were seen.
+                                    </div>
                                 )}
                             </div>
-                        </div>
-                    )
-                })}
-            </div>
+                        )
+                    })}
+                </div>
+            )}
         </>
     )
 }

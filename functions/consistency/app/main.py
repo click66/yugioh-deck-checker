@@ -136,6 +136,9 @@ def lambda_handler(event, context):
             return {str(k): v for k, v in counter.items()}
 
         combined_result = {
+            # Meta
+            "used_gambling": f"{int(use_gambling)}",
+
             # Probabilities
             "p5": result_dict["p5"],
             "p6": result_dict["p6"],
