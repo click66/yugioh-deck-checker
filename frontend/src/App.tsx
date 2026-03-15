@@ -254,8 +254,9 @@ export default function App() {
                         specific hands.
                     </p>
                     <p className="px-2">
-                        Configure your deck and create a set of ideal hands; the
-                        analysis will generate 1 million random hands to give an
+                        Configure your deck and create a set of ideal hands. The
+                        simulator will generate 1 million random hands (both as
+                        a 5-card hand and with a 6th card drawn) to give an
                         actual result of how often you will open one of them.
                     </p>
 
