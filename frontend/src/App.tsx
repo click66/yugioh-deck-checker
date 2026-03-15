@@ -839,6 +839,39 @@ export function Results({ job, cardDatabase }: ResultsProps) {
         },
     ]
 
+    const renderTopCards = (
+        counts: Record<string, string | number>,
+        title: string,
+        tooltip: string,
+    ) => {
+        const entries = Object.entries(counts)
+            .map(([id, count]) => {
+                const name = getCardName(id)
+                if (!name) return null
+                const pct = (Number(count) / numHands) * 100
+                return { name, pct }
+            })
+            .filter(Boolean) as { name: string; pct: number }[]
+
+        const top3 = entries.sort((a, b) => b.pct - a.pct).slice(0, 3)
+
+        if (top3.length === 0) return null
+
+        return (
+            <div className="mb-4">
+                <div className="font-medium mb-1">{title}</div>
+                <div className="text-sm text-gray-700">
+                    {top3.map((c) => (
+                        <div key={c.name}>
+                            {c.name}: {c.pct.toFixed(2)}%
+                        </div>
+                    ))}
+                </div>
+                <div className="text-xs text-gray-400 mt-1">{tooltip}</div>
+            </div>
+        )
+    }
+
     return (
         <>
             <hr className="w-[70%] border-t border-gray-300 mx-auto my-6" />
@@ -872,82 +905,24 @@ export function Results({ job, cardDatabase }: ResultsProps) {
                 </div>
             </div>
 
-            <div className="mt-6 space-y-4">
-                {/* Ideal Hands Contribution */}
-                <div className="p-4 border rounded-lg bg-white shadow">
-                    <div className="text-gray-600 font-medium mb-2 flex items-center gap-1">
-                        Ideal Hands Contribution
-                        <InfoTooltip content="Percentage of hands where this card appeared in a hand that matched your ideal hand." />
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                        {Object.entries(idealHandCounts).map(
-                            ([cardId, countStr]) => {
-                                const count = Number(countStr)
-                                const percent = (count / numHands) * 100
-                                return (
-                                    <div
-                                        key={cardId}
-                                        className="px-2 py-1 bg-green-100 text-green-800 rounded text-sm"
-                                    >
-                                        {getCardName(cardId)}:{' '}
-                                        {percent.toFixed(2)}%
-                                    </div>
-                                )
-                            },
-                        )}
-                    </div>
-                </div>
-
-                {/* Blocking Cards */}
-                <div className="p-4 border rounded-lg bg-white shadow">
-                    <div className="text-gray-600 font-medium mb-2 flex items-center gap-1">
-                        Blocking Cards
-                        <InfoTooltip content="Percentage of hands where this card was in your hand but prevented you from completing an ideal hand." />
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                        {Object.entries(blockingCardCounts).map(
-                            ([cardId, countStr]) => {
-                                const count = Number(countStr)
-                                const percent = (count / numHands) * 100
-                                return (
-                                    <div
-                                        key={cardId}
-                                        className="px-2 py-1 bg-red-100 text-red-800 rounded text-sm"
-                                    >
-                                        {getCardName(cardId)}:{' '}
-                                        {percent.toFixed(2)}%
-                                    </div>
-                                )
-                            },
-                        )}
-                    </div>
-                </div>
-
-                {/* Near Misses */}
-                <div className="p-4 border rounded-lg bg-white shadow">
-                    <div className="text-gray-600 font-medium mb-2 flex items-center gap-1">
-                        Near Misses
-                        <InfoTooltip content="Percentage of hands where this card was not in your hand but its presence could have completed an ideal hand." />
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                        {Object.entries(nearMissCounts).map(
-                            ([cardId, countStr]) => {
-                                const count = Number(countStr)
-                                const percent = (count / numHands) * 100
-                                return (
-                                    <div
-                                        key={cardId}
-                                        className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-sm"
-                                    >
-                                        {getCardName(cardId)}:{' '}
-                                        {percent.toFixed(2)}%
-                                    </div>
-                                )
-                            },
-                        )}
-                    </div>
-                </div>
+            <div className="mt-6">
+                {renderTopCards(
+                    idealHandCounts,
+                    'Most Helpful Cards',
+                    'Percentage of hands where this card appeared in a hand that matched your ideal hand.',
+                )}
+                {renderTopCards(
+                    blockingCardCounts,
+                    'Most Dead Draws',
+                    'Percentage of hands where this card was in your hand but prevented you from completing an ideal hand.',
+                )}
+                {renderTopCards(
+                    nearMissCounts,
+                    'Most Commonly Missing',
+                    'Percentage of hands where this card was not in your hand but could have completed an ideal hand.',
+                )}
             </div>
+
             {usedGambling && (
                 <div className="mt-6 space-y-4">
                     {gamblingStats.map((stat) => {
