@@ -35,11 +35,20 @@ const loadingMessages = [
     'Calculating probabilities',
     'Recreating perfectly quaffed hair',
     'Running probability scenarios',
-    "Stacking the deck myself so there's no one else to blame",
+    'Stacking the deck',
     'Postulating a winning strategem',
     'Initiating duel simulation',
     'Calculating player strength',
-    'Performing quantum analysis',
+    'Performing quantum duel analysis',
+    'Scanning for dead draws',
+    'Activating Pot of Greed',
+    'Scanning for pathetic cards',
+    'Calculating brick percentages',
+    'Linking into the VRAINS',
+    'Simulating first turn plays',
+    'Searching for Habikiri',
+    'Running Monte Carlo simulation',
+    'Evaluating effects of deck thinning',
 ]
 
 const wildcardOptions: Wildcard[] = [
@@ -87,7 +96,8 @@ export default function App() {
     const [job, setJob] = useState<ConsistencyJobResponse | null>(null)
     const [loading, setLoading] = useState(false)
     const [loadingMessage, setLoadingMessage] = useState(
-        loadingMessages[Math.floor(Math.random() * loadingMessages.length)],
+        loadingMessages[Math.floor(Math.random() * loadingMessages.length)] +
+            '...',
     )
     const [error, setError] = useState<string | null>(null)
     const [useGambling, setUseGambling] = useState(false)
@@ -106,7 +116,7 @@ export default function App() {
             setLoadingMessage(
                 loadingMessages[
                     Math.floor(Math.random() * loadingMessages.length)
-                ],
+                ] + '...',
             )
         }, 5000)
         return () => clearInterval(interval)
