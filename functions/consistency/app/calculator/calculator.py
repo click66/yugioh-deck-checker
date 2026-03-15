@@ -79,31 +79,32 @@ def hand_is_wild(
                     attr_counter[(field, value)] += 1
 
     def match_pattern(pattern: Union[Sequence[int | str], Counter]) -> bool:
-        # Convert to Counter if needed
-        pat_counter: Counter = pattern if isinstance(
-            pattern, Counter) else Counter(pattern)
+        pat_counter: Counter = pattern if isinstance(pattern, Counter) else Counter(pattern)
         remaining_attrs: Counter = Counter()
 
-        # Check each card in the pattern
+        # Attempt to match exact cards
         for card, count in pat_counter.items():
-            if isinstance(card, str) and card.startswith("any_"):
-                # wildcard logic
-                _, field, value = card.split("_", 2)
-                available = attr_counter.get(
-                    (field, value), 0) + remaining_attrs.get((field, value), 0)
-                if available < count:
-                    return False
-            else:
-                # exact-card logic
+            if isinstance(card, int):
                 card_info = card_database.get(card)
                 if card_info is None:
                     return False
                 if hand_counter.get(card, 0) < count:
                     return False
-                # track remaining attributes for wildcards
+
                 for field, value in card_info.items():
                     if value is not None:
                         remaining_attrs[(field, value)] -= count
+
+        # Attempt to match wildcard
+        for card, count in pat_counter.items():
+            if isinstance(card, str) and card.startswith("any_"):
+                _, field, value = card.split("_", 2)
+
+                available = attr_counter.get((field, value), 0) + \
+                            remaining_attrs.get((field, value), 0)
+
+                if available < count:
+                    return False
 
         return True
 
