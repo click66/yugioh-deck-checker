@@ -54,54 +54,56 @@ def hand_is_good(
         for pattern in ideal_counters
     )
 
+def hand_is_wild_fast(hand, compiled_patterns, card_attr_index):
+    """
+    Ultra-fast hand matching.
+    - hand: Sequence[int]
+    - compiled_patterns: output of compile_patterns()
+    - card_attr_index: output of build_card_attr_index()
+    """
 
-def hand_is_wild_attr_index(
-    hand: Sequence[int],
-    ideal_hands: Sequence[Union[Sequence[int | str], Counter]],
-    card_attr_index: dict[int, Counter],
-) -> bool:
-    hand_counter = Counter(hand)
+    # Count cards in hand
+    hand_counter = {}
+    for c in hand:
+        hand_counter[c] = hand_counter.get(c, 0) + 1
 
-    # build attribute counter using precomputed values
-    attr_counter = Counter()
+    # Build attribute counter
+    attr_counter = {}
     for card in hand:
         card_attrs = card_attr_index.get(card)
         if card_attrs:
             for attr, val in card_attrs.items():
-                attr_counter[attr] += val
+                attr_counter[attr] = attr_counter.get(attr, 0) + val
 
-    def match_pattern(pat_counter: Counter) -> bool:
-        remaining_attrs = Counter()
+    # Local variables for speed
+    hand_get = hand_counter.get
+    attr_get = attr_counter.get
+    card_attr_get = card_attr_index.get
 
-        # exact cards first
-        for card, count in pat_counter.items():
-            if type(card) is int:
+    for exact, wild in compiled_patterns:
 
-                if hand_counter[card] < count:
-                    return False
+        # Track remaining attributes for wildcards
+        remaining_attrs = {}
 
-                card_attrs = card_attr_index.get(card)
-                if card_attrs:
-                    for attr, val in card_attrs.items():
-                        remaining_attrs[attr] -= val * count
+        # Exact card check
+        for card, count in exact.items():
+            if hand_get(card, 0) < count:
+                break
 
-        # wildcard checks
-        for card, count in pat_counter.items():
-            if type(card) is str and card.startswith("any_"):
-
-                _, field, value = card.split("_", 2)
-
-                available = (
-                    attr_counter.get((field, value), 0)
-                    + remaining_attrs.get((field, value), 0)
-                )
-
+            card_attrs = card_attr_get(card)
+            if card_attrs:
+                for attr, val in card_attrs.items():
+                    remaining_attrs[attr] = remaining_attrs.get(attr, 0) - val * count
+        else:
+            # Wildcard check
+            for attr, count in wild.items():
+                available = attr_get(attr, 0) + remaining_attrs.get(attr, 0)
                 if available < count:
-                    return False
+                    break
+            else:
+                return True
 
-        return True
-
-    return any(match_pattern(pattern) for pattern in ideal_hands)
+    return False
 
 
 def hand_is_wild(

@@ -6,7 +6,7 @@ import logging
 import json
 from app.calculator.calculator import (
     hand_is_wild,
-    hand_is_wild_attr_index,
+    hand_is_wild_fast,
     simple_consistency,
     run_test_hand_with_gambling,
     run_test_hand_without_gambling,
@@ -66,6 +66,31 @@ def _build_card_attribute_index(card_database: CardDatabase) -> dict[int, Counte
 
     return index
 
+def _compile_patterns(ideal_hands):
+    """
+    Convert patterns to a form optimized for matching:
+    - exact: {card_id: count}
+    - wild: {(field,value): count}
+    """
+    compiled = []
+
+    for pattern in ideal_hands:
+        # convert Counter if needed
+        counter = pattern if isinstance(pattern, dict) else Counter(pattern)
+        exact = {}
+        wild = {}
+
+        for card, count in counter.items():
+            if type(card) is int:
+                exact[card] = count
+            else:
+                # wildcard: any_<field>_<value>
+                _, field, value = card.split("_", 2)
+                wild[(field, value)] = count
+
+        compiled.append((exact, wild))
+    return compiled
+
 
 def lambda_handler(event, context):
     job_id = event.get("job_id")
@@ -90,6 +115,7 @@ def lambda_handler(event, context):
         card_database: CardDatabase = {
             int(card["id"]): card for card in card_list}
         card_attribute_index = _build_card_attribute_index(card_database)
+        compiled_hands = _compile_patterns(ideal_hands)
         logger.info("Card database loaded successfully from S3.")
     except Exception as e:
         logger.error(f"Failed to load card database from S3: {e}")
@@ -98,10 +124,10 @@ def lambda_handler(event, context):
     try:
         # Always use run_test_hand_with_gambling for consistency checks
         def hand_tester(remaining_deck, hand, ideal_counters):
-            def hand_checker(hand, ideal_hands, _):
-                return hand_is_wild_attr_index(
+            def hand_checker(hand, _, __):
+                return hand_is_wild_fast(
                     hand,
-                    ideal_hands,
+                    compiled_hands,
                     card_attribute_index,
                 )
                 
