@@ -3,6 +3,7 @@ from collections import Counter
 
 from app.calculator.calculator import hand_is_wild, run_test_hand_with_gambling
 from app.calculator.result import HandTestResult
+from app.utils import build_card_attribute_index, compile_patterns
 
 
 CARD_DATABASE = {
@@ -15,6 +16,8 @@ CARD_DATABASE = {
     46986414: {"superType": "monster", "attribute": "DARK", "race": "Spellcaster", "name": "Dark Magician"},
 }
 
+CARD_ATTRIBUTE_INDEX = build_card_attribute_index(CARD_DATABASE)
+
 GAMBLING_CARDS = {
     1475311: {
         "draw": 2,
@@ -23,8 +26,9 @@ GAMBLING_CARDS = {
 }
 
 
-def hand_checker(hand, ideal_hands, card_database) -> HandTestResult:
-    return hand_is_wild(hand, ideal_hands, card_database)
+def build_hand_checker(ideal_hands) -> HandTestResult:
+    compiled = compile_patterns(ideal_hands)
+    return lambda hand: hand_is_wild(hand, compiled, CARD_ATTRIBUTE_INDEX)
 
 
 def test_exact_match():
@@ -34,7 +38,11 @@ def test_exact_match():
     remaining_deck = []
 
     result = run_test_hand_with_gambling(
-        hand_checker, hand, ideal_hands, CARD_DATABASE, remaining_deck, GAMBLING_CARDS
+        build_hand_checker(ideal_hands),
+        hand,
+        CARD_ATTRIBUTE_INDEX,
+        remaining_deck,
+        GAMBLING_CARDS,
     )
 
     assert result.matches_without_gambling is True
@@ -57,7 +65,11 @@ def test_no_gamble_card_in_hand():
     ideal_hands = [[80181649]]
 
     result = run_test_hand_with_gambling(
-        hand_checker, hand, ideal_hands, CARD_DATABASE, remaining_deck, GAMBLING_CARDS
+        build_hand_checker(ideal_hands),
+        hand,
+        CARD_ATTRIBUTE_INDEX,
+        remaining_deck,
+        GAMBLING_CARDS,
     )
 
     assert result.matches_without_gambling is False
@@ -79,7 +91,11 @@ def test_allure_of_darkness_with_dark():
     ideal_hands = [[86988864, 80181649]]
 
     result = run_test_hand_with_gambling(
-        hand_checker, hand, ideal_hands, CARD_DATABASE, remaining_deck, GAMBLING_CARDS
+        build_hand_checker(ideal_hands),
+        hand,
+        CARD_ATTRIBUTE_INDEX,
+        remaining_deck,
+        GAMBLING_CARDS,
     )
 
     assert result.matches_without_gambling is False
@@ -106,7 +122,11 @@ def test_allure_of_darkness_with_dark_but_dark_was_discarded():
     ideal_hands = [[14261867, 80181649]]
 
     result = run_test_hand_with_gambling(
-        hand_checker, hand, ideal_hands, CARD_DATABASE, remaining_deck, GAMBLING_CARDS
+        build_hand_checker(ideal_hands),
+        hand,
+        CARD_ATTRIBUTE_INDEX,
+        remaining_deck,
+        GAMBLING_CARDS,
     )
 
     assert result.matches_without_gambling is False
@@ -128,7 +148,11 @@ def test_allure_of_darkness_without_dark():
     ideal_hands = [[80181649]]
 
     result = run_test_hand_with_gambling(
-        hand_checker, hand, ideal_hands, CARD_DATABASE, remaining_deck, GAMBLING_CARDS
+        build_hand_checker(ideal_hands),
+        hand,
+        CARD_ATTRIBUTE_INDEX,
+        remaining_deck,
+        GAMBLING_CARDS,
     )
 
     assert result.matches_without_gambling is False
@@ -158,7 +182,11 @@ def test_discard_constraint_single_count():
     ideal_hands = [[80181649]]
 
     result = run_test_hand_with_gambling(
-        hand_checker, hand, ideal_hands, CARD_DATABASE, remaining_deck, gambling_cards_dup
+        build_hand_checker(ideal_hands),
+        hand,
+        CARD_ATTRIBUTE_INDEX,
+        remaining_deck,
+        gambling_cards_dup,
     )
 
     assert result.matches_without_gambling is False
@@ -180,7 +208,11 @@ def test_gamble_draw_limited_by_deck():
     ideal_hands = [[80181649]]
 
     result = run_test_hand_with_gambling(
-        hand_checker, hand, ideal_hands, CARD_DATABASE, remaining_deck, GAMBLING_CARDS
+        build_hand_checker(ideal_hands),
+        hand,
+        CARD_ATTRIBUTE_INDEX,
+        remaining_deck,
+        GAMBLING_CARDS,
     )
 
     assert result.matches_without_gambling is False
@@ -202,7 +234,11 @@ def test_wildcard_satisfied_by_gamble():
     ideal_hands = [["any_attribute_dark"]]
 
     result = run_test_hand_with_gambling(
-        hand_checker, hand, ideal_hands, CARD_DATABASE, remaining_deck, GAMBLING_CARDS
+        build_hand_checker(ideal_hands),
+        hand,
+        CARD_ATTRIBUTE_INDEX,
+        remaining_deck,
+        GAMBLING_CARDS,
     )
 
     assert result.matches_without_gambling is False
@@ -223,12 +259,11 @@ def test_multiple_gamble_cards_only_one_used():
     ideal_hands = [[80181649]]
 
     result = run_test_hand_with_gambling(
-        hand_checker,
+        build_hand_checker(ideal_hands),
         hand,
-        ideal_hands,
-        CARD_DATABASE,
+        CARD_ATTRIBUTE_INDEX,
         remaining_deck,
-        GAMBLING_CARDS
+        GAMBLING_CARDS,
     )
 
     assert result.matches_without_gambling is False
@@ -250,12 +285,11 @@ def test_gamble_seen_but_draw_fails_before_attempt():
     ideal_hands = [[80181649]]
 
     result = run_test_hand_with_gambling(
-        hand_checker,
+        build_hand_checker(ideal_hands),
         hand,
-        ideal_hands,
-        CARD_DATABASE,
+        CARD_ATTRIBUTE_INDEX,
         remaining_deck,
-        GAMBLING_CARDS
+        GAMBLING_CARDS,
     )
 
     assert result.matches_without_gambling is False
@@ -276,12 +310,11 @@ def test_successful_gamble_updates_all_counters_correctly():
     ideal_hands = [[80181649]]
 
     result = run_test_hand_with_gambling(
-        hand_checker,
+        build_hand_checker(ideal_hands),
         hand,
-        ideal_hands,
-        CARD_DATABASE,
+        CARD_ATTRIBUTE_INDEX,
         remaining_deck,
-        GAMBLING_CARDS
+        GAMBLING_CARDS,
     )
 
     assert result.matches_without_gambling is False
@@ -307,10 +340,9 @@ def test_failed_gamble_does_not_mark_rescue():
     ideal_hands = [[80181649]]
 
     result = run_test_hand_with_gambling(
-        hand_checker,
+        build_hand_checker(ideal_hands),
         hand,
-        ideal_hands,
-        CARD_DATABASE,
+        CARD_ATTRIBUTE_INDEX,
         remaining_deck,
         GAMBLING_CARDS
     )
@@ -341,12 +373,11 @@ def test_multiple_gamble_cards_only_first_is_evaluated():
     ideal_hands = [[80181649]]
 
     result = run_test_hand_with_gambling(
-        hand_checker,
+        build_hand_checker(ideal_hands),
         hand,
-        ideal_hands,
-        CARD_DATABASE,
+        CARD_ATTRIBUTE_INDEX,
         remaining_deck,
-        gambling_cards_multi
+        gambling_cards_multi,
     )
 
     # Only the first gamble card in the hand should be tracked
@@ -366,12 +397,11 @@ def test_second_gamble_not_counted_when_first_resolves():
     ideal_hands = [[80181649]]
 
     result = run_test_hand_with_gambling(
-        hand_checker,
+        build_hand_checker(ideal_hands),
         hand,
-        ideal_hands,
-        CARD_DATABASE,
+        CARD_ATTRIBUTE_INDEX,
         remaining_deck,
-        gambling_cards_multi
+        gambling_cards_multi,
     )
 
     assert result.matches_without_gambling is False
@@ -393,12 +423,11 @@ def test_gamble_card_present_but_not_needed():
     ideal_hands = [[80181649]]
 
     result = run_test_hand_with_gambling(
-        hand_checker,
+        build_hand_checker(ideal_hands),
         hand,
-        ideal_hands,
-        CARD_DATABASE,
+        CARD_ATTRIBUTE_INDEX,
         remaining_deck,
-        GAMBLING_CARDS
+        GAMBLING_CARDS,
     )
 
     assert result.matches_without_gambling is True
@@ -421,12 +450,11 @@ def test_gamble_draws_cards_but_hand_still_fails():
     ideal_hands = [[80181649]]
 
     result = run_test_hand_with_gambling(
-        hand_checker,
+        build_hand_checker(ideal_hands),
         hand,
-        ideal_hands,
-        CARD_DATABASE,
+        CARD_ATTRIBUTE_INDEX,
         remaining_deck,
-        GAMBLING_CARDS
+        GAMBLING_CARDS,
     )
 
     assert result.matches_without_gambling is False
@@ -455,12 +483,11 @@ def test_multiple_gambles_do_not_stack_metrics():
     ideal_hands = [[80181649]]
 
     result = run_test_hand_with_gambling(
-        hand_checker,
+        build_hand_checker(ideal_hands),
         hand,
-        ideal_hands,
-        CARD_DATABASE,
+        CARD_ATTRIBUTE_INDEX,
         remaining_deck,
-        gambling_cards_multi
+        gambling_cards_multi,
     )
 
     assert result.matches_without_gambling is False
@@ -482,12 +509,11 @@ def test_empty_remaining_deck_with_no_gamble_cards():
     ideal_hands = [[80181649]]
 
     result = run_test_hand_with_gambling(
-        hand_checker,
+        build_hand_checker(ideal_hands),
         hand,
-        ideal_hands,
-        CARD_DATABASE,
+        CARD_ATTRIBUTE_INDEX,
         remaining_deck,
-        GAMBLING_CARDS
+        GAMBLING_CARDS,
     )
 
     assert result.matches_without_gambling is False
@@ -510,12 +536,11 @@ def test_multiple_discard_candidates_only_one_discarded_ideal_hand_drawn():
     ideal_hands = [[46986414, 80181649]]    # Ideal hand we want to achieve
 
     result = run_test_hand_with_gambling(
-        hand_checker,
+        build_hand_checker(ideal_hands),
         hand,
-        ideal_hands,
-        CARD_DATABASE,
+        CARD_ATTRIBUTE_INDEX,
         remaining_deck,
-        GAMBLING_CARDS
+        GAMBLING_CARDS,
     )
 
     # Without gambling, hand is not ideal
@@ -543,12 +568,11 @@ def test_multiple_discard_candidates_only_one_discarded_ideal_hand_mixed_with_ex
     ideal_hands = [[46986414, 80181649]]    # Ideal hand we want to achieve
 
     result = run_test_hand_with_gambling(
-        hand_checker,
+        build_hand_checker(ideal_hands),
         hand,
-        ideal_hands,
-        CARD_DATABASE,
+        CARD_ATTRIBUTE_INDEX,
         remaining_deck,
-        GAMBLING_CARDS
+        GAMBLING_CARDS,
     )
 
     # Without gambling, hand is not ideal

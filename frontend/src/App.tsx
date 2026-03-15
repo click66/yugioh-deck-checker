@@ -5,7 +5,27 @@ import { useCardDatabase } from './hooks/useCardDatabase'
 import { DeckRow } from './components/dca/deck-row'
 import { parseYdk } from './services/ydk-import'
 import type { DeckLine, Card, Wildcard } from './types/deck'
+import { InformationCircleIcon } from '@heroicons/react/16/solid'
 
+function InfoTooltip({ content }: { content: string }) {
+    const [visible, setVisible] = useState(false)
+
+    return (
+        <div className="relative inline-block ml-1">
+            <InformationCircleIcon
+                className="w-4 h-4 text-gray-400 hover:text-gray-600 cursor-pointer"
+                onMouseEnter={() => setVisible(true)}
+                onMouseLeave={() => setVisible(false)}
+                onClick={() => setVisible((v) => !v)}
+            />
+            {visible && (
+                <div className="absolute z-10 w-64 p-2 bg-gray-700 text-white text-xs rounded shadow-lg mt-1 -left-32 sm:left-0">
+                    {content}
+                </div>
+            )}
+        </div>
+    )
+}
 const loadingMessages = [
     'Shuffling the deck',
     'Drawing opening hands',
@@ -217,7 +237,7 @@ export default function App() {
             <div className="bg-gray-50 py-10">
                 <div className="max-w-3xl mx-auto space-y-6">
                     <h1 className="text-3xl font-semibold text-center text-gray-800">
-                        Yu-Gi-Oh! Deck Consistency Analysis
+                        Yu-Gi-Oh! Deck Analysis
                     </h1>
                     <p className="px-2">
                         A tool for estimating a deck's consistency at drawing
@@ -249,6 +269,13 @@ export default function App() {
             </div>
             <footer className="w-full bg-gray-100 border-t border-gray-300 mt-10">
                 <div className="max-w-3xl mx-auto text-center text-gray-700 space-y-1 py-4 px-3 text-sm">
+                    <p className="mb-4">
+                        This is a beta tool and as such bugs may be present. The
+                        simulator is naive and is not guaranteed to play hands
+                        perfectly. If you find any issues or have suggestions
+                        for improvement, feel free to{' '}
+                        <a className="text-blue-600 hover:underline" href="mailto:click66@gmail.com">email me</a>.
+                    </p>
                     <p>
                         Adapted from code championed and shared by{' '}
                         <a
@@ -529,7 +556,7 @@ function Step2({ expanded, toggle, handProps, setExpandedSteps }: any) {
 
             {showHandModal && (
                 <div
-                    className="fixed inset-0 bg-black/30 flex items-center justify-center p-4"
+                    className="fixed inset-0 bg-black/30 flex items-center justify-center p-4 z-50"
                     onClick={() => setShowHandModal(false)}
                 >
                     <div
@@ -648,6 +675,7 @@ function Step2({ expanded, toggle, handProps, setExpandedSteps }: any) {
 
 function Step3({ expanded, toggle, analysisProps, children }: any) {
     const {
+        hands,
         job,
         loading,
         loadingMessage,
@@ -666,19 +694,29 @@ function Step3({ expanded, toggle, analysisProps, children }: any) {
             toggle={toggle}
             expandable={!loading}
         >
-            <div className="flex items-center gap-3 mb-4">
-                <input
-                    type="checkbox"
-                    id="use-gambling"
-                    checked={useGambling}
-                    onChange={(e) => setUseGambling(e.target.checked)}
-                    className="w-4 h-4"
-                />
-                <label htmlFor="use-gambling" className="text-gray-700">
-                    Use gambling?
-                </label>
-            </div>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mb-4">
+                <div className="flex items-center gap-2 order-0 sm:order-2">
+                    <label className="flex items-center gap-2 text-gray-700 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={useGambling}
+                            onChange={(e) => setUseGambling(e.target.checked)}
+                            className="w-4 h-4"
+                        />
+                        Use gambling?
+                    </label>
 
+                    <InfoTooltip content="Simulate cards that allow drawing extra cards, accounting for if those cards have discard requirements (e.g Allure of Darkness). This may increase overall processing time and not all gambling cards may be supported." />
+                </div>
+
+                <button
+                    onClick={runAnalysis}
+                    disabled={hands.length === 0}
+                    className="px-5 py-2 bg-purple-500 text-white rounded disabled:opacity-50 whitespace-nowrap order-1 sm:order-1"
+                >
+                    Run Analysis
+                </button>
+            </div>
             {!loading && (
                 <button
                     onClick={runAnalysis}

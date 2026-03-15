@@ -6,13 +6,12 @@ import logging
 import json
 from app.calculator.calculator import (
     hand_is_wild,
-    hand_is_wild_fast,
     simple_consistency,
     run_test_hand_with_gambling,
     run_test_hand_without_gambling,
     CardDatabase,
 )
-from app.calculator.result import HandTestResult
+from app.utils import build_card_attribute_index, compile_patterns
 
 logger = logging.getLogger()
 logger.setLevel("INFO")
@@ -54,58 +53,6 @@ def _serialize_result(result):
         return {"S": str(result)}
 
 
-def _build_card_attribute_index(card_database: CardDatabase) -> dict[int, Counter]:
-    index: dict[int, Counter] = {}
-
-    for card_id, info in card_database.items():
-        c = Counter()
-        for field, value in info.items():
-            if value is not None:
-                c[(field, value)] += 1
-        index[card_id] = c
-
-    return index
-
-
-def _compile_patterns(ideal_hands):
-    """
-    Convert patterns to a form optimized for matching:
-    - exact: {card_id: count}
-    - wild: {(field,value): count}
-    Also normalizes integer strings to int.
-    """
-    compiled = []
-
-    for pattern in ideal_hands:
-        # Normalize pattern: convert strings that are numeric to int
-        normalized = [
-            c if isinstance(c, str) and c.startswith("any_") else int(c)
-            for c in pattern
-        ]
-
-        # Convert to Counter
-        counter = Counter(normalized)
-        exact = {}
-        wild = {}
-
-        for card, count in counter.items():
-            if isinstance(card, int):
-                exact[card] = count
-            elif isinstance(card, str) and card.startswith("any_"):
-                parts = card.split("_", 2)
-                if len(parts) != 3:
-                    raise ValueError(f"Invalid wildcard pattern: {card}")
-                _, field, value = parts
-                wild[(field, value)] = count
-            else:
-                raise ValueError(
-                    f"Invalid pattern entry: {card} ({type(card)})")
-
-        compiled.append((exact, wild))
-
-    return compiled
-
-
 def lambda_handler(event, context):
     job_id = event.get("job_id")
     deckcount = event["deckcount"]
@@ -121,38 +68,36 @@ def lambda_handler(event, context):
 
     logger.info("Reading card database...")
 
+    # Read and compile card database
     try:
         resp = s3.get_object(
             Bucket=CARD_DATABASE_BUCKET_NAME, Key=CARD_DATABASE_KEY)
         card_list = json.load(resp["Body"])
-        # Build database keyed by integer ID
         card_database: CardDatabase = {
             int(card["id"]): card for card in card_list}
-        card_attribute_index = _build_card_attribute_index(card_database)
-        compiled_hands = _compile_patterns(ideal_hands)
+        card_attribute_index = build_card_attribute_index(card_database)
+        compiled_hands = compile_patterns(ideal_hands)
         logger.info("Card database loaded successfully from S3.")
     except Exception as e:
         logger.error(f"Failed to load card database from S3: {e}")
         card_database: CardDatabase = {}
+        card_attribute_index = []
+        compiled_hands = []
 
     try:
-        # Always use run_test_hand_with_gambling for consistency checks
-        def hand_tester(remaining_deck, hand, ideal_counters):
-            # Bind compiled_hands as a default argument to capture it
-            def hand_checker(hand, _, __, compiled=compiled_hands):
-                return hand_is_wild_fast(
+        def hand_tester(remaining_deck, hand):
+            def hand_checker(hand, compiled=compiled_hands):
+                return hand_is_wild(
                     hand,
                     compiled,
                     card_attribute_index,
                 )
 
             if use_gambling:
-                # Returns a full HandTestResult with gambling metrics
                 return run_test_hand_with_gambling(
                     hand_checker=hand_checker,
                     hand=hand,
-                    ideal_hands=ideal_counters,
-                    card_database=card_database,
+                    card_attr_index=card_attribute_index,
                     remaining_deck=remaining_deck,
                     gambling_cards=GAMBLING_CARDS,
                 )
@@ -160,15 +105,12 @@ def lambda_handler(event, context):
                 return run_test_hand_without_gambling(
                     hand_checker=hand_checker,
                     hand=hand,
-                    ideal_hands=ideal_counters,
-                    card_database=card_database,
                 )
 
         result = simple_consistency(
             deckcount=deckcount,
             ratios=ratios,
             names=names,
-            ideal_hands=ideal_hands,
             num_hands=num_hands,
             hand_tester=hand_tester,
         )
