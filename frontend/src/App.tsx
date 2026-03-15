@@ -860,6 +860,7 @@ export function Results({ job, cardDatabase }: ResultsProps) {
         return (
             <div className="mb-4">
                 <div className="font-medium mb-1">{title}</div>
+                <div className="text-xs text-gray-400 mt-1">{tooltip}</div>
                 <div className="text-sm text-gray-700">
                     {top3.map((c) => (
                         <div key={c.name}>
@@ -867,7 +868,6 @@ export function Results({ job, cardDatabase }: ResultsProps) {
                         </div>
                     ))}
                 </div>
-                <div className="text-xs text-gray-400 mt-1">{tooltip}</div>
             </div>
         )
     }
@@ -905,7 +905,7 @@ export function Results({ job, cardDatabase }: ResultsProps) {
                 </div>
             </div>
 
-            <div className="mt-6">
+            {/*<div className="mt-6">
                 {renderTopCards(
                     idealHandCounts,
                     'Most Helpful Cards',
@@ -921,7 +921,7 @@ export function Results({ job, cardDatabase }: ResultsProps) {
                     'Most Commonly Missing',
                     'Percentage of hands where this card was not in your hand but could have completed an ideal hand.',
                 )}
-            </div>
+            </div>*/}
 
             {usedGambling && (
                 <div className="mt-6 space-y-4">
