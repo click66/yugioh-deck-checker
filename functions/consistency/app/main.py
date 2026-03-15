@@ -66,6 +66,7 @@ def _build_card_attribute_index(card_database: CardDatabase) -> dict[int, Counte
 
     return index
 
+
 def _compile_patterns(ideal_hands):
     """
     Convert patterns to a form optimized for matching:
@@ -124,13 +125,14 @@ def lambda_handler(event, context):
     try:
         # Always use run_test_hand_with_gambling for consistency checks
         def hand_tester(remaining_deck, hand, ideal_counters):
-            def hand_checker(hand, _, __):
+            # Bind compiled_hands as a default argument to capture it
+            def hand_checker(hand, _, __, compiled=compiled_hands):
                 return hand_is_wild_fast(
                     hand,
-                    compiled_hands,
+                    compiled,
                     card_attribute_index,
                 )
-                
+
             if use_gambling:
                 # Returns a full HandTestResult with gambling metrics
                 return run_test_hand_with_gambling(
