@@ -839,38 +839,38 @@ export function Results({ job, cardDatabase }: ResultsProps) {
         },
     ]
 
-    const renderTopCards = (
-        counts: Record<string, string | number>,
-        title: string,
-        tooltip: string,
-    ) => {
-        const entries = Object.entries(counts)
-            .map(([id, count]) => {
-                const name = getCardName(id)
-                if (!name) return null
-                const pct = (Number(count) / numHands) * 100
-                return { name, pct }
-            })
-            .filter(Boolean) as { name: string; pct: number }[]
+    // const renderTopCards = (
+    //     counts: Record<string, string | number>,
+    //     title: string,
+    //     tooltip: string,
+    // ) => {
+    //     const entries = Object.entries(counts)
+    //         .map(([id, count]) => {
+    //             const name = getCardName(id)
+    //             if (!name) return null
+    //             const pct = (Number(count) / numHands) * 100
+    //             return { name, pct }
+    //         })
+    //         .filter(Boolean) as { name: string; pct: number }[]
 
-        const top3 = entries.sort((a, b) => b.pct - a.pct).slice(0, 3)
+    //     const top3 = entries.sort((a, b) => b.pct - a.pct).slice(0, 3)
 
-        if (top3.length === 0) return null
+    //     if (top3.length === 0) return null
 
-        return (
-            <div className="mb-4">
-                <div className="font-medium mb-1">{title}</div>
-                <div className="text-xs text-gray-400 mt-1">{tooltip}</div>
-                <div className="text-sm text-gray-700">
-                    {top3.map((c) => (
-                        <div key={c.name}>
-                            {c.name}: {c.pct.toFixed(2)}%
-                        </div>
-                    ))}
-                </div>
-            </div>
-        )
-    }
+    //     return (
+    //         <div className="mb-4">
+    //             <div className="font-medium mb-1">{title}</div>
+    //             <div className="text-xs text-gray-400 mt-1">{tooltip}</div>
+    //             <div className="text-sm text-gray-700">
+    //                 {top3.map((c) => (
+    //                     <div key={c.name}>
+    //                         {c.name}: {c.pct.toFixed(2)}%
+    //                     </div>
+    //                 ))}
+    //             </div>
+    //         </div>
+    //     )
+    // }
 
     return (
         <>
