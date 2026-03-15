@@ -346,10 +346,10 @@ def simple_consistency(
         names, ratios) for card in [name] * count]
     deckcount = len(deck)
 
-    def normalize_pattern(pattern):
-        return [c if isinstance(c, str) and c.startswith("any_") else int(c) for c in pattern]
+    # def normalize_pattern(pattern):
+    #     return [c if isinstance(c, str) and c.startswith("any_") else int(c) for c in pattern]
 
-    ideal_counters = [Counter(normalize_pattern(p)) for p in ideal_hands]
+    # ideal_counters = [Counter(normalize_pattern(p)) for p in ideal_hands]
 
     # Initialize metrics
     good_5 = good_6 = rescued_5 = rescued_6 = 0
@@ -369,7 +369,7 @@ def simple_consistency(
             remaining_deck_5.remove(card)
 
         result5: HandTestResult = hand_tester(
-            remaining_deck_5, hand5.copy(), ideal_counters)
+            remaining_deck_5, hand5.copy(), None)
         if result5.matches_without_gambling:
             good_5 += 1
         if result5.rescued_with_gambling:
@@ -388,7 +388,7 @@ def simple_consistency(
             remaining_deck_for_6.remove(extra_card)
 
             result6: HandTestResult = hand_tester(
-                remaining_deck_for_6, hand6, ideal_counters)
+                remaining_deck_for_6, hand6, None)
             if result6.matches_without_gambling:
                 good_6 += 1
             if result6.rescued_with_gambling:

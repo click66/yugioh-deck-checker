@@ -72,24 +72,37 @@ def _compile_patterns(ideal_hands):
     Convert patterns to a form optimized for matching:
     - exact: {card_id: count}
     - wild: {(field,value): count}
+    Also normalizes integer strings to int.
     """
     compiled = []
 
     for pattern in ideal_hands:
-        # convert Counter if needed
-        counter = pattern if isinstance(pattern, dict) else Counter(pattern)
+        # Normalize pattern: convert strings that are numeric to int
+        normalized = [
+            c if isinstance(c, str) and c.startswith("any_") else int(c)
+            for c in pattern
+        ]
+
+        # Convert to Counter
+        counter = Counter(normalized)
         exact = {}
         wild = {}
 
         for card, count in counter.items():
-            if type(card) is int:
+            if isinstance(card, int):
                 exact[card] = count
-            else:
-                # wildcard: any_<field>_<value>
-                _, field, value = card.split("_", 2)
+            elif isinstance(card, str) and card.startswith("any_"):
+                parts = card.split("_", 2)
+                if len(parts) != 3:
+                    raise ValueError(f"Invalid wildcard pattern: {card}")
+                _, field, value = parts
                 wild[(field, value)] = count
+            else:
+                raise ValueError(
+                    f"Invalid pattern entry: {card} ({type(card)})")
 
         compiled.append((exact, wild))
+
     return compiled
 
 
