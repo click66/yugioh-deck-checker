@@ -31,7 +31,7 @@ services:
       - "8080:8080"
     environment:
       - AWS_DEFAULT_REGION=eu-west-2
-      - SERVICES=dynamodb,iam,lambda
+      - SERVICES=dynamodb,iam,lambda,sqs
       - DEBUG=1
       - DATA_DIR=/tmp/localstack/data
     volumes:

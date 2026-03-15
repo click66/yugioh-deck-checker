@@ -58,8 +58,8 @@ functions:
     memorySize: 1024
     reservedConcurrency: 20 # protect against abuse
     environment:
+      AWS_ACCOUNT_ID: !Ref "AWS::AccountId"
       ENV_PREFIX: "${self:service}-${opt:stage, self:provider.stage, 'prod'}"
-      JOB_QUEUE_URL: !Ref JobQueue
     events:
       - httpApi:
           path: /{proxy+}

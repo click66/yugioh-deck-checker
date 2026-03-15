@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
 
-from app.dependencies.jobs.aws_lambda import LambdaJobRunner
+from app.dependencies.jobs.sqs import SQSJobRunner
 from app.routers import consistency
 from app.settings import get_settings
 
@@ -20,26 +20,24 @@ async def lifespan(app: FastAPI):
     settings = get_settings()
 
     try:
-        # Setup AWS Lambda and initiatilse job runners
+        # Setup job runners
         job_runners = {}
         for key, function_name in FUNCTIONS.items():
-            runner = LambdaJobRunner(
-                function_name=function_name,
+            runner = SQSJobRunner(
+                queue_url=settings.JOB_QUEUE_URL,  # Ensure this is set in your environment
                 settings=settings,
             )
             await runner.init_client()
             job_runners[key] = runner
         app.state.job_runners = job_runners
 
-        # Setup DynamoDB connection and initialise job registry
+        # Setup DynamoDB session
         kwargs = {"region_name": settings.AWS_REGION}
-
         if settings.LOCALSTACK_ENDPOINT:
             kwargs.update(
                 aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
                 aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
             )
-
         app.state.dynamodb_session = aioboto3.Session(**kwargs)
 
         yield
