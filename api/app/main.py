@@ -24,7 +24,7 @@ async def lifespan(app: FastAPI):
         job_runners = {}
         for key, function_name in FUNCTIONS.items():
             runner = SQSJobRunner(
-                queue_url=settings.JOB_QUEUE_URL,  # Ensure this is set in your environment
+                queue_name=function_name,
                 settings=settings,
             )
             await runner.init_client()

@@ -118,7 +118,7 @@ resources:
     JobQueue:
       Type: AWS::SQS::Queue
       Properties:
-        QueueName: "${self:service}-${opt:stage, self:provider.stage, 'prod'}-job-queue"
+        QueueName: "${self:service}-${opt:stage, self:provider.stage, 'prod'}-consistency"
         VisibilityTimeout: 900 # 15 minutes
         MessageRetentionPeriod: 345600 # 4 days
 

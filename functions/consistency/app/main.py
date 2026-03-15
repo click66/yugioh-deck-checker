@@ -53,7 +53,7 @@ def _serialize_result(result):
         return {"S": str(result)}
 
 
-def event_handler(event, context):
+def event_handler(event):
     job_id = event.get("job_id")
     deckcount = event["deckcount"]
     names = event["names"]
