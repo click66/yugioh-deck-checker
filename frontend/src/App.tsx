@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createJob, getJob, JobStatus } from './services/consistency'
 import type { ConsistencyJobResponse } from './services/consistency'
 import { useCardDatabase } from './hooks/useCardDatabase'
@@ -59,8 +59,9 @@ const wildcardOptions: Wildcard[] = [
 
 const DECK_STORAGE_KEY = 'deck'
 const HANDS_STORAGE_KEY = 'hands'
-
 export default function App() {
+    const pollTimeout = useRef<number | null>(null)
+
     const [expandedSteps, setExpandedSteps] = useState<{
         [key: number]: boolean
     }>({
@@ -178,8 +179,18 @@ export default function App() {
             setError(result.error?.detail || 'Job failed')
             localStorage.removeItem('activeJobId')
         } else {
-            setTimeout(() => pollJob(jobId), 5000)
+            pollTimeout.current = setTimeout(() => pollJob(jobId), 5000)
         }
+    }
+
+    const cancelAnalysis = () => {
+        if (pollTimeout.current) {
+            clearTimeout(pollTimeout.current)
+            pollTimeout.current = null
+        }
+        setLoading(false)
+        setJob(null)
+        localStorage.removeItem('activeJobId')
     }
 
     const runAnalysis = async () => {
@@ -240,6 +251,7 @@ export default function App() {
         error,
         useGambling,
         setUseGambling,
+        cancelAnalysis,
     }
 
     return (
@@ -700,6 +712,7 @@ function Step3({ expanded, toggle, analysisProps, children }: any) {
         error,
         useGambling,
         setUseGambling,
+        cancelAnalysis,
     } = analysisProps
 
     const { cards: cardDatabase } = useCardDatabase()
@@ -739,6 +752,15 @@ function Step3({ expanded, toggle, analysisProps, children }: any) {
                         </button>
                     </>
                 )}
+
+                {loading && (
+                    <button
+                        onClick={cancelAnalysis}
+                        className="px-5 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+                    >
+                        Cancel Analysis
+                    </button>
+                )}
             </div>
 
             {children}
@@ -761,7 +783,6 @@ function Step3({ expanded, toggle, analysisProps, children }: any) {
         </Panel>
     )
 }
-
 interface ResultsProps {
     job: ConsistencyJobResponse
     cardDatabase: Card[]
