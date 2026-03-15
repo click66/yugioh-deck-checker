@@ -45,6 +45,9 @@ export const ConsistencyJobSchema = z.object({
             gamble_attempted_6: z.string().optional(),
             useful_gambles_5: z.record(z.string(), z.string()).optional(),
             useful_gambles_6: z.record(z.string(), z.string()).optional(),
+            near_miss_counts: z.string().optional(),
+            blocking_card_counts: z.string().optional(),
+            ideal_hand_counts: z.string().optional(),
         })
         .optional()
         .nullable(),

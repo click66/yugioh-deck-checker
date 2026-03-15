@@ -26,7 +26,6 @@ s3 = boto3.client("s3")
 GAMBLING_CARDS = {
     1475311: {  # Allure of Darkness
         "draw": 2,
-        # must discard one card matching this
         "discard": [("attribute", "DARK")],
     },
     70368879: {  # Upstart Goblin
@@ -59,16 +58,14 @@ def event_handler(event):
     names = event["names"]
     ratios = event["ratios"]
     ideal_hands = event["ideal_hands"]
-    num_hands = 1_000_000  # fixed for now
+    num_hands = 1_000_000
 
-    # Feature toggle: whether to use gambling
     use_gambling = event.get("use_gambling", False)
 
     logger.info(f"Job {job_id} started. use_gambling={use_gambling}")
 
     logger.info("Reading card database...")
 
-    # Read and compile card database
     try:
         resp = s3.get_object(
             Bucket=CARD_DATABASE_BUCKET_NAME, Key=CARD_DATABASE_KEY)
@@ -127,29 +124,20 @@ def event_handler(event):
     update_expression = "SET #s = :status"
 
     if result is not None:
-        # Convert the dataclass to a dict
         result_dict = {k: getattr(result, k)
                        for k in result.__dataclass_fields__}
 
-        # Convert Counters to string-keyed dicts for DynamoDB
         def serialize_counter(counter: Counter[int]) -> dict:
             return {str(k): v for k, v in counter.items()}
 
         combined_result = {
-            # Meta
             "used_gambling": f"{int(use_gambling)}",
-
-            # Probabilities
             "p5": result_dict["p5"],
             "p6": result_dict["p6"],
             "p5_with_gambling": result_dict["p5_with_gambling"],
             "p6_with_gambling": result_dict["p6_with_gambling"],
-
-            # Rescued hands
             "rescued_5": result_dict["rescued_5"],
             "rescued_6": result_dict["rescued_6"],
-
-            # Gamble metrics
             "useful_gambles_5": serialize_counter(result_dict.get("useful_gambles_5", Counter())),
             "useful_gambles_6": serialize_counter(result_dict.get("useful_gambles_6", Counter())),
             "gamble_seen_5": serialize_counter(result_dict.get("gamble_seen_5", Counter())),
@@ -160,6 +148,10 @@ def event_handler(event):
             "gamble_failed_6": result_dict.get("failed_gambles_6", 0),
             "gamble_unplayable_5": result_dict.get("unplayable_gambles_5", 0),
             "gamble_unplayable_6": result_dict.get("unplayable_gambles_6", 0),
+            # New actionable metrics
+            "near_miss_counts": serialize_counter(result_dict.get("near_miss_counts", Counter())),
+            "blocking_card_counts": serialize_counter(result_dict.get("blocking_card_counts", Counter())),
+            "ideal_hand_counts": serialize_counter(result_dict.get("ideal_hand_counts", Counter())),
         }
 
         update_expression += ", #r = :result"
@@ -178,18 +170,11 @@ def event_handler(event):
 
 
 def lambda_handler(event, context):
-    """
-    SQS-compatible wrapper that calls the existing event_handler.
-    Logs full payload for debugging.
-    """
     for record in event.get("Records", []):
         try:
             payload = json.loads(record["body"])
-            logger.info(
-                f"Received new job: {json.dumps(payload, indent=2)}")
-
+            logger.info(f"Received new job: {json.dumps(payload, indent=2)}")
             event_handler(payload)
-
         except Exception as e:
             logger.error(f"Failed to process SQS record: {record}")
             logger.exception(e)

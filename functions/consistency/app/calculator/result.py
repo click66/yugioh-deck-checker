@@ -37,6 +37,10 @@ class ConsistencyResult:
     unplayable_gambles_5: int
     unplayable_gambles_6: int
 
+    near_miss_counts: Counter[int] = field(default_factory=C)
+    blocking_card_counts: Counter[int] = field(default_factory=C)
+    ideal_hand_counts: Counter[int] = field(default_factory=C)
+
 
 @dataclass
 class HandTestResult:
