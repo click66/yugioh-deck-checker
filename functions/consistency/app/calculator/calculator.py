@@ -65,17 +65,17 @@ def hand_is_wild_attr_index(
     # build attribute counter using precomputed values
     attr_counter = Counter()
     for card in hand:
-        attr_counter += card_attr_index.get(card, Counter())
+        card_attrs = card_attr_index.get(card)
+        if card_attrs:
+            for attr, val in card_attrs.items():
+                attr_counter[attr] += val
 
-    def match_pattern(pattern: Union[Sequence[int | str], Counter]) -> bool:
-        pat_counter = pattern if isinstance(
-            pattern, Counter) else Counter(pattern)
-
+    def match_pattern(pat_counter: Counter) -> bool:
         remaining_attrs = Counter()
 
         # exact cards first
         for card, count in pat_counter.items():
-            if isinstance(card, int):
+            if type(card) is int:
 
                 if hand_counter[card] < count:
                     return False
@@ -87,7 +87,7 @@ def hand_is_wild_attr_index(
 
         # wildcard checks
         for card, count in pat_counter.items():
-            if isinstance(card, str) and card.startswith("any_"):
+            if type(card) is str and card.startswith("any_"):
 
                 _, field, value = card.split("_", 2)
 
@@ -101,11 +101,7 @@ def hand_is_wild_attr_index(
 
         return True
 
-    for pattern in ideal_hands:
-        if match_pattern(pattern):
-            return True
-
-    return False
+    return any(match_pattern(pattern) for pattern in ideal_hands)
 
 
 def hand_is_wild(
@@ -142,7 +138,7 @@ def hand_is_wild(
                 card_info = card_database.get(card)
                 if card_info is None:
                     return False
-                if hand_counter.get(card, 0) < count:
+                if hand_counter[card] < count:
                     return False
 
                 for field, value in card_info.items():
@@ -162,12 +158,7 @@ def hand_is_wild(
 
         return True
 
-    # Return True if any pattern matches
-    for pattern in ideal_hands:
-        if match_pattern(pattern):
-            return True
-
-    return False
+    return any(match_pattern(pattern) for pattern in ideal_hands)
 
 
 def run_test_hand_without_gambling(
