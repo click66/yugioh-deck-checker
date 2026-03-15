@@ -813,9 +813,9 @@ export function Results({ job, cardDatabase }: ResultsProps) {
     const gambleSeen5 = job.result.gamble_seen_5 || {}
     const gambleSeen6 = job.result.gamble_seen_6 || {}
 
-    const nearMissCounts = job.result.near_miss_counts || {}
-    const blockingCardCounts = job.result.blocking_card_counts || {}
-    const idealHandCounts = job.result.ideal_hand_counts || {}
+    // const nearMissCounts = job.result.near_miss_counts || {}
+    // const blockingCardCounts = job.result.blocking_card_counts || {}
+    // const idealHandCounts = job.result.ideal_hand_counts || {}
 
     const getCardName = (id: string) =>
         cardDatabase.find((c) => `${c.id}` === id)?.name || id
