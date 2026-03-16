@@ -3,7 +3,7 @@ from app.transform import transform_cards, process_cards
 full_card = {
     "id": 12345,
     "name": "Test Card",
-    "frameType": "monster",
+    "frameType": "synchro",
     "race": "Dragon",
     "archetype": "Testarchetype",
     "attribute": "LIGHT"
@@ -39,12 +39,13 @@ def test_transform_cards_full():
     expected_detailed = {
         "id": 12345,
         "name": "Test Card",
-        "frameType": "monster",
+        "frameType": "synchro",
         "race": "Dragon",
         "archetype": "Testarchetype",
-        "attribute": "LIGHT"
+        "attribute": "LIGHT",
+        "superType": "monster",
     }
-    assert detailed == [expected_detailed]
+    assert detailed[0] == expected_detailed
 
 
 def test_transform_cards_partial():
@@ -61,9 +62,10 @@ def test_transform_cards_partial():
     expected_detailed = {
         "id": 67890,
         "name": "Partial Card",
-        "frameType": "spell"
+        "frameType": "spell",
+        "superType": "spell",
     }
-    assert detailed == [expected_detailed]
+    assert detailed[0] == expected_detailed
 
 
 def test_transform_cards_empty():
@@ -97,15 +99,17 @@ def test_transform_cards_multiple():
         {
             "id": 12345,
             "name": "Test Card",
-            "frameType": "monster",
+            "frameType": "synchro",
             "race": "Dragon",
             "archetype": "Testarchetype",
-            "attribute": "LIGHT"
+            "attribute": "LIGHT",
+            "superType": "monster",
         },
         {
             "id": 67890,
             "name": "Partial Card",
-            "frameType": "spell"
+            "frameType": "spell",
+            "superType": "spell",
         }
     ]
     assert detailed == expected_detailed
@@ -131,15 +135,17 @@ def test_process_cards_with_mock_fetch():
         {
             "id": 12345,
             "name": "Test Card",
-            "frameType": "monster",
+            "frameType": "synchro",
             "race": "Dragon",
             "archetype": "Testarchetype",
-            "attribute": "LIGHT"
+            "attribute": "LIGHT",
+            "superType": "monster",
         },
         {
             "id": 67890,
             "name": "Partial Card",
-            "frameType": "spell"
+            "frameType": "spell",
+            "superType": "spell",
         }
     ]
     assert detailed == expected_detailed

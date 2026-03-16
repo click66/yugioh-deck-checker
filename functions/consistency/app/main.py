@@ -11,6 +11,7 @@ from app.calculator.calculator import (
     run_test_hand_without_gambling,
     CardDatabase,
 )
+from app.calculator.data import GAMBLING_CARDS
 from app.utils import build_card_attribute_index, compile_patterns
 
 logger = logging.getLogger()
@@ -22,21 +23,6 @@ dynamodb = boto3.client("dynamodb")
 CARD_DATABASE_BUCKET_NAME = f"{os.environ.get('ENV_PREFIX', 'dev')}-card-database"
 CARD_DATABASE_KEY = "cards-detailed.json"
 s3 = boto3.client("s3")
-
-GAMBLING_CARDS = {
-    1475311: {  # Allure of Darkness
-        "draw": 2,
-        "discard": [("attribute", "DARK")],
-    },
-    70368879: {  # Upstart Goblin
-        "draw": 1,
-        "discard": [],
-    },
-    20508881: {  # Radiant Typhoon Vision
-        "draw": 2,
-        "discard": [("race", "Quick-Play")],
-    },
-}
 
 
 def _serialize_result(result):

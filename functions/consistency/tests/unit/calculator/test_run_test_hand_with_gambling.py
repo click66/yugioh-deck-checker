@@ -2,6 +2,7 @@ import pytest
 from collections import Counter
 
 from app.calculator.calculator import hand_is_wild, run_test_hand_with_gambling
+from app.calculator.data import GAMBLING_CARDS
 from app.calculator.result import HandTestResult
 from app.utils import build_card_attribute_index, compile_patterns
 
@@ -14,6 +15,7 @@ CARD_DATABASE = {
     6850209: {"superType": "spell", "race": "Quick-Play", "name": "A Deal with Dark Ruler"},
     1475311: {"superType": "spell", "name": "Allure of Darkness", "race": "Normal"},
     46986414: {"superType": "monster", "attribute": "DARK", "race": "Spellcaster", "name": "Dark Magician"},
+    52840267: {"superType": "monster", "attribute": "DARK", "race": "Fairy", "name": "Darklord Ixchel", "archetype": "Darklord"},
 }
 
 CARD_ATTRIBUTE_INDEX = build_card_attribute_index(CARD_DATABASE)
@@ -23,6 +25,10 @@ GAMBLING_CARDS = {
         "draw": 2,
         "discard": [("attribute", "DARK")],
     },
+    52840267: {
+        "draw": 2,
+        "discard": [("archetype", "Darklord")],
+    }
 }
 
 
@@ -588,3 +594,27 @@ def test_multiple_discard_candidates_only_one_discarded_ideal_hand_mixed_with_ex
     assert result.gamble_failed == 0
     assert result.gamble_unplayable == 0
     assert result.useful_gambles == Counter({1475311: 1})
+
+
+def test_archetype_gamble_activated():
+    # Hand: Darklord Ixchel + Darklord Ixchel
+    # Deck: A Case for K9 + blank
+    # Ideal hand: A Case for K9
+    hand= [52840267, 52840267]
+    remaining_deck = [80181649, 0]
+    ideal_hands = [[80181649]]
+
+    result = run_test_hand_with_gambling(
+        build_hand_checker(ideal_hands),
+        hand,
+        CARD_ATTRIBUTE_INDEX,
+        remaining_deck,
+        GAMBLING_CARDS,
+    )
+
+    assert result.matches_without_gambling is False
+    assert result.matches_with_gambling is True
+    assert result.rescued_with_gambling == 1
+    assert result.gamble_seen == Counter({52840267: 1})
+    assert result.gamble_attempted == 1
+    assert result.useful_gambles == Counter({52840267: 1})
