@@ -14,5 +14,17 @@ GAMBLING_CARDS = {
     52840267: {  # Darklord Ixchel
         "draw": 2,
         "discard": [("archetype", "Darklord")],
+    },
+    84211599: {  # Pot of Prosperity
+        "draw": 6,
+        "discard": [],
+    },
+    49238328: {  # Pot of Extravagance
+        "draw": 2,
+        "discard": [],
+    },
+    55144522: {  # Pot of Greed
+        "draw": 2,
+        "discard": [],
     }
 }
