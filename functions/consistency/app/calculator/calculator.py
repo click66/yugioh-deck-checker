@@ -163,24 +163,27 @@ def run_test_hand_with_gambling(
     gamble_seen[gamble_card] += 1
     spec = gambling_cards[gamble_card]
     discard_requirements = spec.get("discard", [])
-    discardable = [
-        c for c in hand
-        for field, value in discard_requirements
-        if card_attr_index.get(c, {}).get((field, value), 0) > 0
-    ]
 
-    if not discardable:
-        gamble_unplayable += 1
-        return HandTestResult(
-            matches_without_gambling=matches_without,
-            matches_with_gambling=matches_with,
-            rescued_with_gambling=rescued_with_gambling,
-            useful_gambles=useful_gambles,
-            gamble_seen=gamble_seen,
-            gamble_attempted=gamble_attempted,
-            gamble_failed=gamble_failed,
-            gamble_unplayable=gamble_unplayable,
-        )
+    if discard_requirements:
+        discardable = [
+            c for c in hand
+            for field, value in discard_requirements
+            if card_attr_index.get(c, {}).get((field, value), 0) > 0
+        ]
+        if not discardable:
+            gamble_unplayable += 1
+            return HandTestResult(
+                matches_without_gambling=matches_without,
+                matches_with_gambling=matches_with,
+                rescued_with_gambling=rescued_with_gambling,
+                useful_gambles=useful_gambles,
+                gamble_seen=gamble_seen,
+                gamble_attempted=gamble_attempted,
+                gamble_failed=gamble_failed,
+                gamble_unplayable=gamble_unplayable,
+            )
+    else:
+        discardable = []
 
     new_hand = list(hand)
     new_hand.remove(gamble_card)

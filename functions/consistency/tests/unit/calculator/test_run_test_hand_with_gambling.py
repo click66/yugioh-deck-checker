@@ -20,17 +20,6 @@ CARD_DATABASE = {
 
 CARD_ATTRIBUTE_INDEX = build_card_attribute_index(CARD_DATABASE)
 
-GAMBLING_CARDS = {
-    1475311: {
-        "draw": 2,
-        "discard": [("attribute", "DARK")],
-    },
-    52840267: {
-        "draw": 2,
-        "discard": [("archetype", "Darklord")],
-    }
-}
-
 
 def build_hand_checker(ideal_hands) -> HandTestResult:
     compiled = compile_patterns(ideal_hands)
@@ -600,7 +589,7 @@ def test_archetype_gamble_activated():
     # Hand: Darklord Ixchel + Darklord Ixchel
     # Deck: A Case for K9 + blank
     # Ideal hand: A Case for K9
-    hand= [52840267, 52840267]
+    hand = [52840267, 52840267]
     remaining_deck = [80181649, 0]
     ideal_hands = [[80181649]]
 
@@ -618,3 +607,36 @@ def test_archetype_gamble_activated():
     assert result.gamble_seen == Counter({52840267: 1})
     assert result.gamble_attempted == 1
     assert result.useful_gambles == Counter({52840267: 1})
+
+
+def test_pot_of_prosperity_draws_six_cards():
+    # Hand contains Pot of Prosperity
+    hand = [84211599]  # Pot of Prosperity
+    # Deck contains enough cards to complete the ideal hand
+    remaining_deck = [80181649, 86988864,
+                      14261867, 23771716, 6850209, 46986414]
+    ideal_hands = [[80181649, 86988864, 14261867, 23771716, 6850209, 46986414]]
+
+    result = run_test_hand_with_gambling(
+        build_hand_checker(ideal_hands),
+        hand,
+        CARD_ATTRIBUTE_INDEX,
+        remaining_deck,
+        GAMBLING_CARDS,
+    )
+
+    # Without gambling, the hand fails
+    assert result.matches_without_gambling == 0
+
+    # Gambling should succeed because Pot of Prosperity draws 6 cards
+    assert result.matches_with_gambling == True
+    assert result.rescued_with_gambling == True
+
+    # Pot of Prosperity should be seen and attempted
+    assert result.gamble_seen == Counter({84211599: 1})
+    assert result.gamble_attempted == 1
+    assert result.gamble_failed == 0
+    assert result.gamble_unplayable == 0
+
+    # The gamble should be counted as useful
+    assert result.useful_gambles == Counter({84211599: 1})
