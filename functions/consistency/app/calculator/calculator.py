@@ -64,7 +64,7 @@ def hand_is_wild(
     hand: Sequence[CardID],
     compiled_patterns: list[CompiledPattern],
     card_attr_index: CardAttrIndex,
-):
+) -> int:
     hand_counter = {}
     for c in hand:
         hand_counter[c] = hand_counter.get(c, 0) + 1
@@ -79,6 +79,8 @@ def hand_is_wild(
     hand_get = hand_counter.get
     attr_get = attr_counter.get
     card_attr_get = card_attr_index.get
+
+    match_count = 0
 
     for exact, wild in compiled_patterns:
         remaining_attrs = {}
@@ -96,8 +98,9 @@ def hand_is_wild(
                 if available < count:
                     break
             else:
-                return True
-    return False
+                match_count += 1
+
+    return match_count
 
 
 def run_test_hand_without_gambling(
@@ -125,8 +128,8 @@ def run_test_hand_with_gambling(
     gambling_cards: GamblingCards,
 ) -> HandTestResult:
 
-    matches_without = hand_checker(hand)
-    matches_with = matches_without
+    match_count_without = hand_checker(hand)
+    match_count_with = match_count_without
     rescued_with_gambling = 0
 
     useful_gambles: Counter[int] = Counter()
@@ -135,10 +138,11 @@ def run_test_hand_with_gambling(
     gamble_failed = 0
     gamble_unplayable = 0
 
-    if matches_without:
+    # Already successful → do not evaluate gambling
+    if match_count_without > 0:
         return HandTestResult(
-            matches_without_gambling=matches_without,
-            matches_with_gambling=matches_with,
+            matches_without_gambling=match_count_without,
+            matches_with_gambling=match_count_with,
             rescued_with_gambling=rescued_with_gambling,
             useful_gambles=useful_gambles,
             gamble_seen=gamble_seen,
@@ -148,10 +152,11 @@ def run_test_hand_with_gambling(
         )
 
     gamble_card = next((c for c in hand if c in gambling_cards), None)
+
     if gamble_card is None:
         return HandTestResult(
-            matches_without_gambling=matches_without,
-            matches_with_gambling=matches_with,
+            matches_without_gambling=match_count_without,
+            matches_with_gambling=match_count_with,
             rescued_with_gambling=rescued_with_gambling,
             useful_gambles=useful_gambles,
             gamble_seen=gamble_seen,
@@ -163,6 +168,7 @@ def run_test_hand_with_gambling(
     gamble_seen[gamble_card] += 1
     spec = gambling_cards[gamble_card]
     discard_requirements = spec.get("discard", [])
+
     discardable = [
         c for c in hand
         for field, value in discard_requirements
@@ -172,8 +178,8 @@ def run_test_hand_with_gambling(
     if not discardable:
         gamble_unplayable += 1
         return HandTestResult(
-            matches_without_gambling=matches_without,
-            matches_with_gambling=matches_with,
+            matches_without_gambling=match_count_without,
+            matches_with_gambling=match_count_with,
             rescued_with_gambling=rescued_with_gambling,
             useful_gambles=useful_gambles,
             gamble_seen=gamble_seen,
@@ -184,12 +190,13 @@ def run_test_hand_with_gambling(
 
     new_hand = list(hand)
     new_hand.remove(gamble_card)
+
     num_to_draw = spec.get("draw", 0)
     if len(remaining_deck) < num_to_draw:
         gamble_unplayable += 1
         return HandTestResult(
-            matches_without_gambling=matches_without,
-            matches_with_gambling=matches_with,
+            matches_without_gambling=match_count_without,
+            matches_with_gambling=match_count_with,
             rescued_with_gambling=rescued_with_gambling,
             useful_gambles=useful_gambles,
             gamble_seen=gamble_seen,
@@ -199,9 +206,11 @@ def run_test_hand_with_gambling(
         )
 
     gamble_attempted += 1
+
     drawn_cards = random.sample(remaining_deck, num_to_draw)
     new_hand.extend(drawn_cards)
 
+    # Perform exactly one discard
     for c in new_hand:
         for field, value in discard_requirements:
             if card_attr_index.get(c, {}).get((field, value), 0) > 0:
@@ -211,16 +220,19 @@ def run_test_hand_with_gambling(
             continue
         break
 
-    if hand_checker(new_hand):
-        matches_with = True
+    match_count_after = hand_checker(new_hand)
+
+    if match_count_after > 0:
+        match_count_with = match_count_after
         rescued_with_gambling = 1
         useful_gambles[gamble_card] += 1
     else:
+        match_count_with = 0
         gamble_failed += 1
 
     return HandTestResult(
-        matches_without_gambling=matches_without,
-        matches_with_gambling=matches_with,
+        matches_without_gambling=match_count_without,
+        matches_with_gambling=match_count_with,
         rescued_with_gambling=rescued_with_gambling,
         useful_gambles=useful_gambles,
         gamble_seen=gamble_seen,
@@ -247,8 +259,11 @@ def simple_consistency(
         ratios.append(blanks)
         names.append(0)
 
-    deck: list[int] = [int(card) for name, count in zip(
-        names, ratios) for card in [name] * count]
+    deck: list[int] = [
+        int(card)
+        for name, count in zip(names, ratios)
+        for card in [name] * count
+    ]
     deckcount = len(deck)
 
     good_5 = good_6 = rescued_5 = rescued_6 = 0
@@ -265,6 +280,10 @@ def simple_consistency(
     blocking_card_counts: Counter[int] = Counter()
     ideal_hand_counts: Counter[int] = Counter()
 
+    # NEW: distribution of match counts
+    match_distribution_5: Counter[int] = Counter()
+    match_distribution_6: Counter[int] = Counter()
+
     for _ in range(num_hands):
         hand5 = random.sample(deck, min(5, deckcount))
         remaining_deck_5 = deck.copy()
@@ -272,7 +291,11 @@ def simple_consistency(
             remaining_deck_5.remove(card)
 
         result5: HandTestResult = hand_tester(remaining_deck_5, hand5.copy())
-        if result5.matches_without_gambling:
+
+        count5 = result5.matches_without_gambling
+        match_distribution_5[count5] += 1
+
+        if count5 > 0:
             good_5 += 1
             for c in hand5:
                 ideal_hand_counts[c] += 1
@@ -282,8 +305,9 @@ def simple_consistency(
             for c in set(deck) - set(hand5):
                 near_miss_counts[c] += 1
 
-        if result5.rescued_with_gambling:
+        if result5.rescued_with_gambling > 0:
             rescued_5 += 1
+
         failed_gambles_5 += result5.gamble_failed
         unplayable_gambles_5 += result5.gamble_unplayable
         gamble_attempted_5 += result5.gamble_attempted
@@ -297,7 +321,11 @@ def simple_consistency(
             remaining_deck_for_6.remove(extra_card)
 
             result6: HandTestResult = hand_tester(remaining_deck_for_6, hand6)
-            if result6.matches_without_gambling:
+
+            count6 = result6.matches_without_gambling
+            match_distribution_6[count6] += 1
+
+            if count6 > 0:
                 good_6 += 1
                 for c in hand6:
                     ideal_hand_counts[c] += 1
@@ -307,8 +335,9 @@ def simple_consistency(
                 for c in set(deck) - set(hand6):
                     near_miss_counts[c] += 1
 
-            if result6.rescued_with_gambling:
+            if result6.rescued_with_gambling > 0:
                 rescued_6 += 1
+
             failed_gambles_6 += result6.gamble_failed
             unplayable_gambles_6 += result6.gamble_unplayable
             gamble_attempted_6 += result6.gamble_attempted
@@ -318,8 +347,9 @@ def simple_consistency(
     p5 = good_5 / num_hands
     p6 = good_6 / num_hands if deckcount >= 6 else 0.0
     p5_with_gambling = (good_5 + rescued_5) / num_hands
-    p6_with_gambling = (good_6 + rescued_6) / \
-        num_hands if deckcount >= 6 else 0.0
+    p6_with_gambling = (
+        (good_6 + rescued_6) / num_hands if deckcount >= 6 else 0.0
+    )
 
     return ConsistencyResult(
         p5=p5,
@@ -341,4 +371,6 @@ def simple_consistency(
         near_miss_counts=near_miss_counts,
         blocking_card_counts=blocking_card_counts,
         ideal_hand_counts=ideal_hand_counts,
+        match_distribution_5=match_distribution_5,
+        match_distribution_6=match_distribution_6,
     )

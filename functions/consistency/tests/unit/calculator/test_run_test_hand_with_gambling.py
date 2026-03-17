@@ -51,8 +51,8 @@ def test_exact_match():
         GAMBLING_CARDS,
     )
 
-    assert result.matches_without_gambling is True
-    assert result.matches_with_gambling is True
+    assert result.matches_without_gambling is 1
+    assert result.matches_with_gambling is 1
 
     # Because the hand was already successful no gambling interaction should occur
     assert result.rescued_with_gambling == 0
@@ -78,8 +78,8 @@ def test_no_gamble_card_in_hand():
         GAMBLING_CARDS,
     )
 
-    assert result.matches_without_gambling is False
-    assert result.matches_with_gambling is False
+    assert result.matches_without_gambling is 0
+    assert result.matches_with_gambling is 0
 
     assert result.rescued_with_gambling == 0
     assert result.gamble_seen == Counter()
@@ -104,8 +104,8 @@ def test_allure_of_darkness_with_dark():
         GAMBLING_CARDS,
     )
 
-    assert result.matches_without_gambling is False
-    assert result.matches_with_gambling is True
+    assert result.matches_without_gambling is 0
+    assert result.matches_with_gambling is 1
 
     # Gambling rescued the hand
     assert result.rescued_with_gambling == 1
@@ -135,8 +135,8 @@ def test_allure_of_darkness_with_dark_but_dark_was_discarded():
         GAMBLING_CARDS,
     )
 
-    assert result.matches_without_gambling is False
-    assert result.matches_with_gambling is False
+    assert result.matches_without_gambling is 0
+    assert result.matches_with_gambling is 0
 
     # Gambling was attempted but failed to rescue the hand
     assert result.rescued_with_gambling == 0
@@ -161,8 +161,8 @@ def test_allure_of_darkness_without_dark():
         GAMBLING_CARDS,
     )
 
-    assert result.matches_without_gambling is False
-    assert result.matches_with_gambling is False
+    assert result.matches_without_gambling is 0
+    assert result.matches_with_gambling is 0
 
     # Gambling card was seen but could not be activated
     assert result.gamble_seen == Counter({1475311: 1})
@@ -195,8 +195,8 @@ def test_discard_constraint_single_count():
         gambling_cards_dup,
     )
 
-    assert result.matches_without_gambling is False
-    assert result.matches_with_gambling is True
+    assert result.matches_without_gambling is 0
+    assert result.matches_with_gambling is 1
 
     assert result.rescued_with_gambling == 1
     assert result.gamble_seen == Counter({1475311: 1})
@@ -221,8 +221,8 @@ def test_gamble_draw_limited_by_deck():
         GAMBLING_CARDS,
     )
 
-    assert result.matches_without_gambling is False
-    assert result.matches_with_gambling is False
+    assert result.matches_without_gambling is 0
+    assert result.matches_with_gambling is 0
 
     assert result.gamble_seen == Counter({1475311: 1})
     assert result.gamble_attempted == 0
@@ -247,8 +247,8 @@ def test_wildcard_satisfied_by_gamble():
         GAMBLING_CARDS,
     )
 
-    assert result.matches_without_gambling is False
-    assert result.matches_with_gambling is False
+    assert result.matches_without_gambling is 0
+    assert result.matches_with_gambling is 0
 
     assert result.gamble_seen == Counter({1475311: 1})
     assert result.gamble_attempted == 0
@@ -272,8 +272,8 @@ def test_multiple_gamble_cards_only_one_used():
         GAMBLING_CARDS,
     )
 
-    assert result.matches_without_gambling is False
-    assert result.matches_with_gambling is True
+    assert result.matches_without_gambling is 0
+    assert result.matches_with_gambling is 1
 
     # Only one gamble should be counted as seen/attempted even though two copies exist
     assert result.gamble_seen == Counter({1475311: 1})
@@ -298,8 +298,8 @@ def test_gamble_seen_but_draw_fails_before_attempt():
         GAMBLING_CARDS,
     )
 
-    assert result.matches_without_gambling is False
-    assert result.matches_with_gambling is False
+    assert result.matches_without_gambling is 0
+    assert result.matches_with_gambling is 0
 
     assert result.gamble_seen == Counter({1475311: 1})
     assert result.gamble_attempted == 0
@@ -323,8 +323,8 @@ def test_successful_gamble_updates_all_counters_correctly():
         GAMBLING_CARDS,
     )
 
-    assert result.matches_without_gambling is False
-    assert result.matches_with_gambling is True
+    assert result.matches_without_gambling is 0
+    assert result.matches_with_gambling is 1
 
     assert result.rescued_with_gambling == 1
     assert result.gamble_seen == Counter({1475311: 1})
@@ -353,8 +353,8 @@ def test_failed_gamble_does_not_mark_rescue():
         GAMBLING_CARDS
     )
 
-    assert result.matches_without_gambling is False
-    assert result.matches_with_gambling is False
+    assert result.matches_without_gambling is 0
+    assert result.matches_with_gambling is 0
 
     assert result.rescued_with_gambling == 0
 
@@ -410,8 +410,8 @@ def test_second_gamble_not_counted_when_first_resolves():
         gambling_cards_multi,
     )
 
-    assert result.matches_without_gambling is False
-    assert result.matches_with_gambling is True
+    assert result.matches_without_gambling is 0
+    assert result.matches_with_gambling is 1
 
     # Only the first gamble card should be recorded
     assert result.gamble_seen == Counter({1475311: 1})
@@ -436,8 +436,8 @@ def test_gamble_card_present_but_not_needed():
         GAMBLING_CARDS,
     )
 
-    assert result.matches_without_gambling is True
-    assert result.matches_with_gambling is True
+    assert result.matches_without_gambling is 1
+    assert result.matches_with_gambling is 1
 
     # No gambling metrics should be incremented
     assert result.rescued_with_gambling == 0
@@ -463,8 +463,8 @@ def test_gamble_draws_cards_but_hand_still_fails():
         GAMBLING_CARDS,
     )
 
-    assert result.matches_without_gambling is False
-    assert result.matches_with_gambling is False
+    assert result.matches_without_gambling is 0
+    assert result.matches_with_gambling is 0
 
     # Gamble was attempted but produced no success
     assert result.rescued_with_gambling == 0
@@ -496,8 +496,8 @@ def test_multiple_gambles_do_not_stack_metrics():
         gambling_cards_multi,
     )
 
-    assert result.matches_without_gambling is False
-    assert result.matches_with_gambling is False
+    assert result.matches_without_gambling is 0
+    assert result.matches_with_gambling is 0
 
     # Only the first gamble card should be counted
     assert result.gamble_seen == Counter({1475311: 1})
@@ -522,8 +522,8 @@ def test_empty_remaining_deck_with_no_gamble_cards():
         GAMBLING_CARDS,
     )
 
-    assert result.matches_without_gambling is False
-    assert result.matches_with_gambling is False
+    assert result.matches_without_gambling is 0
+    assert result.matches_with_gambling is 0
 
     assert result.rescued_with_gambling == 0
     assert result.gamble_seen == Counter()
@@ -550,10 +550,10 @@ def test_multiple_discard_candidates_only_one_discarded_ideal_hand_drawn():
     )
 
     # Without gambling, hand is not ideal
-    assert result.matches_without_gambling is False
+    assert result.matches_without_gambling is 0
 
     # After gambling, only one discard occurs; hand becomes ideal
-    assert result.matches_with_gambling is True
+    assert result.matches_with_gambling is 1
 
     # Metrics
     assert result.rescued_with_gambling == 1
@@ -582,10 +582,10 @@ def test_multiple_discard_candidates_only_one_discarded_ideal_hand_mixed_with_ex
     )
 
     # Without gambling, hand is not ideal
-    assert result.matches_without_gambling is False
+    assert result.matches_without_gambling is 0
 
     # After gambling, only one discard occurs; hand becomes ideal
-    assert result.matches_with_gambling is True
+    assert result.matches_with_gambling is 1
 
     # Metrics
     assert result.rescued_with_gambling == 1
@@ -612,8 +612,8 @@ def test_archetype_gamble_activated():
         GAMBLING_CARDS,
     )
 
-    assert result.matches_without_gambling is False
-    assert result.matches_with_gambling is True
+    assert result.matches_without_gambling is 0
+    assert result.matches_with_gambling is 1
     assert result.rescued_with_gambling == 1
     assert result.gamble_seen == Counter({52840267: 1})
     assert result.gamble_attempted == 1

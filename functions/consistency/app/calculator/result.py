@@ -1,6 +1,5 @@
 from dataclasses import dataclass, field
 from typing import Counter
-from collections import Counter as C
 
 
 @dataclass
@@ -37,15 +36,20 @@ class ConsistencyResult:
     unplayable_gambles_5: int
     unplayable_gambles_6: int
 
-    near_miss_counts: Counter[int] = field(default_factory=C)
-    blocking_card_counts: Counter[int] = field(default_factory=C)
-    ideal_hand_counts: Counter[int] = field(default_factory=C)
+    # Additional metrics
+    near_miss_counts: Counter[int] = field(default_factory=Counter)
+    blocking_card_counts: Counter[int] = field(default_factory=Counter)
+    ideal_hand_counts: Counter[int] = field(default_factory=Counter)
+
+    # NEW: distribution of counts for hands with 5 or 6 cards
+    match_distribution_5: Counter[int] = field(default_factory=Counter)
+    match_distribution_6: Counter[int] = field(default_factory=Counter)
 
 
 @dataclass
 class HandTestResult:
-    matches_without_gambling: bool
-    matches_with_gambling: bool
+    matches_without_gambling: int
+    matches_with_gambling: int
 
     rescued_with_gambling: int = 0
 
