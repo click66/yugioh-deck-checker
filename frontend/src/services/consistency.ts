@@ -25,7 +25,7 @@ export const ConsistencyJobSchema = z.object({
     ]),
     result: z
         .object({
-            num_hands: z.int(),
+            num_hands: z.coerce.number(),
             used_gambling: z
                 .preprocess((val) => val === '1', z.boolean())
                 .optional()
