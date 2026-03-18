@@ -1,8 +1,12 @@
+import argparse
 import os
+import time
 from typing import Counter
+
 import boto3
-import logging
 import json
+import logging
+import sys
 
 from app.calculator.calculator import (
     hand_is_wild,
@@ -15,7 +19,7 @@ from app.calculator.data import GAMBLING_CARDS
 from app.utils import build_card_attribute_index, compile_patterns
 
 logger = logging.getLogger()
-logger.setLevel("INFO")
+logger.setLevel(logging.INFO)
 
 TABLE_NAME = f"{os.environ.get('ENV_PREFIX', 'dev')}-jobs"
 
@@ -66,6 +70,8 @@ def run_calculation(
     card_database,
     use_gambling,
 ):
+    start_time = time.time()
+
     card_attribute_index = build_card_attribute_index(card_database)
     compiled_hands = compile_patterns(ideal_hands)
     num_hands = 1_000_000
@@ -85,13 +91,22 @@ def run_calculation(
         else:
             return run_test_hand_without_gambling(hand_checker=hand_checker, hand=hand)
 
-    return simple_consistency(
+    result = simple_consistency(
         deckcount=deckcount,
         ratios=ratios,
         names=names,
         num_hands=num_hands,
         hand_tester=hand_tester,
     )
+
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+
+    logger.info(
+        f"Calculator complete; execution time: {elapsed_time:.4f} seconds",
+    )
+
+    return result
 
 
 def event_handler(event):
@@ -191,7 +206,7 @@ def lambda_handler(event, context):
 
 
 if __name__ == "__main__":
-    import argparse
+    logging.basicConfig(level=logging.INFO)
 
     parser = argparse.ArgumentParser(description="Run calculator locally")
     parser.add_argument("--deckcount", type=int, required=True)

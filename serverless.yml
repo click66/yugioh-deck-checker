@@ -55,7 +55,7 @@ functions:
     image:
       name: api
     timeout: 30
-    memorySize: 1024
+    memorySize: 2048
     reservedConcurrency: 20 # protect against abuse
     environment:
       AWS_ACCOUNT_ID: !Ref "AWS::AccountId"
