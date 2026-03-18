@@ -1,9 +1,9 @@
 import os
 from typing import Counter
-
 import boto3
 import logging
 import json
+
 from app.calculator.calculator import (
     hand_is_wild,
     simple_consistency,
@@ -18,11 +18,17 @@ logger = logging.getLogger()
 logger.setLevel("INFO")
 
 TABLE_NAME = f"{os.environ.get('ENV_PREFIX', 'dev')}-jobs"
-dynamodb = boto3.client("dynamodb")
 
 CARD_DATABASE_BUCKET_NAME = f"{os.environ.get('ENV_PREFIX', 'dev')}-card-database"
 CARD_DATABASE_KEY = "cards-detailed.json"
-s3 = boto3.client("s3")
+
+
+def _get_dynamodb_client():
+    return boto3.client("dynamodb")
+
+
+def _get_s3_client():
+    return boto3.client("s3")
 
 
 def _serialize_result(result):
@@ -38,64 +44,82 @@ def _serialize_result(result):
         return {"S": str(result)}
 
 
+def _load_card_database_s3() -> CardDatabase:
+    s3 = _get_s3_client()
+    resp = s3.get_object(Bucket=CARD_DATABASE_BUCKET_NAME,
+                         Key=CARD_DATABASE_KEY)
+    card_list = json.load(resp["Body"])
+    return {int(card["id"]): card for card in card_list}
+
+
+def _load_card_database_local(path: str) -> CardDatabase:
+    with open(path, "r", encoding="utf-8") as f:
+        card_list = json.load(f)
+    return {int(card["id"]): card for card in card_list}
+
+
+def run_calculation(
+    deckcount,
+    names,
+    ratios,
+    ideal_hands,
+    card_database,
+    use_gambling,
+):
+    card_attribute_index = build_card_attribute_index(card_database)
+    compiled_hands = compile_patterns(ideal_hands)
+    num_hands = 1_000_000
+
+    def hand_tester(remaining_deck, hand):
+        def hand_checker(hand, compiled=compiled_hands):
+            return hand_is_wild(hand, compiled, card_attribute_index)
+
+        if use_gambling:
+            return run_test_hand_with_gambling(
+                hand_checker=hand_checker,
+                hand=hand,
+                card_attr_index=card_attribute_index,
+                remaining_deck=remaining_deck,
+                gambling_cards=GAMBLING_CARDS,
+            )
+        else:
+            return run_test_hand_without_gambling(hand_checker=hand_checker, hand=hand)
+
+    return simple_consistency(
+        deckcount=deckcount,
+        ratios=ratios,
+        names=names,
+        num_hands=num_hands,
+        hand_tester=hand_tester,
+    )
+
+
 def event_handler(event):
     job_id = event.get("job_id")
     deckcount = event["deckcount"]
     names = event["names"]
     ratios = event["ratios"]
     ideal_hands = event["ideal_hands"]
-    num_hands = 1_000_000
-
     use_gambling = event.get("use_gambling", False)
 
     logger.info(f"Job {job_id} started. use_gambling={use_gambling}")
-
     logger.info("Reading card database...")
 
     try:
-        resp = s3.get_object(
-            Bucket=CARD_DATABASE_BUCKET_NAME, Key=CARD_DATABASE_KEY)
-        card_list = json.load(resp["Body"])
-        card_database: CardDatabase = {
-            int(card["id"]): card for card in card_list}
-        card_attribute_index = build_card_attribute_index(card_database)
-        compiled_hands = compile_patterns(ideal_hands)
+        card_database = _load_card_database_s3()
         logger.info("Card database loaded successfully from S3.")
     except Exception as e:
         logger.error(f"Failed to load card database from S3: {e}")
-        card_database: CardDatabase = {}
-        card_attribute_index = []
-        compiled_hands = []
+        card_database = {}
 
     try:
-        def hand_tester(remaining_deck, hand):
-            def hand_checker(hand, compiled=compiled_hands):
-                return hand_is_wild(
-                    hand,
-                    compiled,
-                    card_attribute_index,
-                )
-
-            if use_gambling:
-                return run_test_hand_with_gambling(
-                    hand_checker=hand_checker,
-                    hand=hand,
-                    card_attr_index=card_attribute_index,
-                    remaining_deck=remaining_deck,
-                    gambling_cards=GAMBLING_CARDS,
-                )
-            else:
-                return run_test_hand_without_gambling(
-                    hand_checker=hand_checker,
-                    hand=hand,
-                )
-
-        result = simple_consistency(
+        result = run_calculation(
             deckcount=deckcount,
-            ratios=ratios,
             names=names,
-            num_hands=num_hands,
-            hand_tester=hand_tester,
+            ratios=ratios,
+            ideal_hands=ideal_hands,
+            card_database=card_database,
+            use_gambling=use_gambling,
         )
         status = "completed"
     except Exception as e:
@@ -104,6 +128,7 @@ def event_handler(event):
         status = "failed"
 
     logger.info("Writing result...")
+    dynamodb = _get_dynamodb_client()
 
     expression_attr_names = {"#s": "status"}
     expression_attr_values = {":status": {"S": status}}
@@ -134,7 +159,6 @@ def event_handler(event):
             "gamble_failed_6": result_dict.get("failed_gambles_6", 0),
             "gamble_unplayable_5": result_dict.get("unplayable_gambles_5", 0),
             "gamble_unplayable_6": result_dict.get("unplayable_gambles_6", 0),
-            # New actionable metrics
             "near_miss_counts": serialize_counter(result_dict.get("near_miss_counts", Counter())),
             "blocking_card_counts": serialize_counter(result_dict.get("blocking_card_counts", Counter())),
             "ideal_hand_counts": serialize_counter(result_dict.get("ideal_hand_counts", Counter())),
@@ -164,3 +188,32 @@ def lambda_handler(event, context):
         except Exception as e:
             logger.error(f"Failed to process SQS record: {record}")
             logger.exception(e)
+
+
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Run calculator locally")
+    parser.add_argument("--deckcount", type=int, required=True)
+    parser.add_argument("--names", type=str, required=True)
+    parser.add_argument("--ratios", type=str, required=True)
+    parser.add_argument("--ideal_hands", type=str, required=True)
+    parser.add_argument("--card_db", type=str, required=True)
+    parser.add_argument("--use_gambling", action="store_true")
+
+    args = parser.parse_args()
+
+    card_database = _load_card_database_local(args.card_db)
+
+    result = run_calculation(
+        deckcount=args.deckcount,
+        names=json.loads(args.names),
+        ratios=json.loads(args.ratios),
+        ideal_hands=json.loads(args.ideal_hands),
+        card_database=card_database,
+        use_gambling=args.use_gambling,
+    )
+
+    result_dict = {k: getattr(result, k) for k in result.__dataclass_fields__}
+
+    print(json.dumps(result_dict, indent=2))
