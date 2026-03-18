@@ -21,7 +21,7 @@ def test_exact_match():
         hand,
         compile_patterns(ideal_hands),
         CARD_ATTRIBUTE_INDEX,
-    ) is True
+    ) == 1
 
 
 def test_no_match():
@@ -31,7 +31,7 @@ def test_no_match():
         hand,
         compile_patterns(ideal_hands),
         CARD_ATTRIBUTE_INDEX,
-    ) is False
+    ) == 0
 
 
 def test_wildcard_string_any_superType_spell():
@@ -42,14 +42,14 @@ def test_wildcard_string_any_superType_spell():
         hand,
         compile_patterns(ideal_hands),
         CARD_ATTRIBUTE_INDEX,
-    ) is True
+    ) == 1
 
     hand2 = [86988864, 68170903]  # "3-Hump Lacooda" + "A Feint Plan"
     assert hand_is_wild(
         hand2,
         compile_patterns(ideal_hands),
         CARD_ATTRIBUTE_INDEX,
-    ) is False
+    ) == 0
 
 
 def test_wildcard_does_not_consider_specifics():
@@ -60,7 +60,7 @@ def test_wildcard_does_not_consider_specifics():
         hand,
         compile_patterns(ideal_hands),
         CARD_ATTRIBUTE_INDEX,
-    ) is False
+    ) == 0
 
 
 def test_wildcard_considers_duplicates():
@@ -71,7 +71,7 @@ def test_wildcard_considers_duplicates():
         hand,
         compile_patterns(ideal_hands),
         CARD_ATTRIBUTE_INDEX,
-    ) is True
+    ) == 1
 
 
 def test_multiple_wildcards():
@@ -82,7 +82,7 @@ def test_multiple_wildcards():
         hand,
         compile_patterns(ideal_hands),
         CARD_ATTRIBUTE_INDEX,
-    ) is True
+    ) == 1
 
 
 def test_multiple_wildcards_larger_hand():
@@ -93,7 +93,7 @@ def test_multiple_wildcards_larger_hand():
         hand,
         compile_patterns(ideal_hands),
         CARD_ATTRIBUTE_INDEX,
-    ) is False
+    ) == 0
 
 
 def test_multiple_wildcards_larger_hand_duplicates():
@@ -104,7 +104,7 @@ def test_multiple_wildcards_larger_hand_duplicates():
         hand,
         compile_patterns(ideal_hands),
         CARD_ATTRIBUTE_INDEX,
-    ) is False
+    ) == 0
 
 
 def test_duplicates_in_hand():
@@ -115,14 +115,14 @@ def test_duplicates_in_hand():
         hand,
         compile_patterns(ideal_hands),
         CARD_ATTRIBUTE_INDEX,
-    ) is True
+    ) == 1
 
     ideal_hands2 = [[80181649, 80181649, 80181649]]
     assert hand_is_wild(
         hand,
         compile_patterns(ideal_hands2),
         CARD_ATTRIBUTE_INDEX,
-    ) is False
+    ) == 0
 
 
 def test_multiple_ideal_patterns():
@@ -133,7 +133,7 @@ def test_multiple_ideal_patterns():
         hand,
         compile_patterns(ideal_hands),
         CARD_ATTRIBUTE_INDEX,
-    ) is True
+    ) == 1
 
 
 def test_empty_hand_or_empty_ideal():
@@ -144,7 +144,7 @@ def test_empty_hand_or_empty_ideal():
         hand,
         compile_patterns(ideal_hands),
         CARD_ATTRIBUTE_INDEX,
-    ) is True
+    ) == 1
 
     hand2 = [80181649]
     ideal_hands2 = []
@@ -153,4 +153,4 @@ def test_empty_hand_or_empty_ideal():
         hand2,
         compile_patterns(ideal_hands2),
         CARD_ATTRIBUTE_INDEX,
-    ) is False
+    ) == 0
