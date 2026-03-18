@@ -25,10 +25,23 @@ export const ConsistencyJobSchema = z.object({
     ]),
     result: z
         .object({
+            num_hands: z.int(),
             used_gambling: z
                 .preprocess((val) => val === '1', z.boolean())
                 .optional()
                 .default(false),
+            matched_pattern_counts_5: z
+                .record(z.string(), z.string())
+                .optional(),
+            matched_pattern_counts_6: z
+                .record(z.string(), z.string())
+                .optional(),
+            matched_pattern_counts_5_withgamble: z
+                .record(z.string(), z.string())
+                .optional(),
+            matched_pattern_counts_6_withgamble: z
+                .record(z.string(), z.string())
+                .optional(),
             p5: z.string(),
             p6: z.string(),
             p5_with_gambling: z.string().optional(),

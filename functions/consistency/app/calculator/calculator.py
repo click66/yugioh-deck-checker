@@ -64,7 +64,10 @@ def hand_is_wild(
     hand: Sequence[CardID],
     compiled_patterns: list[CompiledPattern],
     card_attr_index: CardAttrIndex,
-):
+) -> int:
+    """
+    Return the number of compiled patterns matched by the hand.
+    """
     hand_counter = {}
     for c in hand:
         hand_counter[c] = hand_counter.get(c, 0) + 1
@@ -79,6 +82,8 @@ def hand_is_wild(
     hand_get = hand_counter.get
     attr_get = attr_counter.get
     card_attr_get = card_attr_index.get
+
+    matched_count = 0
 
     for exact, wild in compiled_patterns:
         remaining_attrs = {}
@@ -96,8 +101,9 @@ def hand_is_wild(
                 if available < count:
                     break
             else:
-                return True
-    return False
+                matched_count += 1
+
+    return matched_count
 
 
 def run_test_hand_without_gambling(
@@ -237,7 +243,7 @@ def simple_consistency(
     deckcount: int,
     ratios: Sequence[int],
     names: Sequence[int],
-    hand_tester: Callable,
+    hand_tester: Callable,  # Returns HandTestResult
     num_hands: int = 1_000_000,
 ) -> ConsistencyResult:
     ratios = ratios.copy()
@@ -268,6 +274,12 @@ def simple_consistency(
     blocking_card_counts: Counter[int] = Counter()
     ideal_hand_counts: Counter[int] = Counter()
 
+    # Track per-hand matched patterns (raw counts)
+    matched_pattern_counts_5_nogamble: Counter[int] = Counter()
+    matched_pattern_counts_6_nogamble: Counter[int] = Counter()
+    matched_pattern_counts_5_withgamble: Counter[int] = Counter()
+    matched_pattern_counts_6_withgamble: Counter[int] = Counter()
+
     for _ in range(num_hands):
         hand5 = random.sample(deck, min(5, deckcount))
         remaining_deck_5 = deck.copy()
@@ -275,8 +287,14 @@ def simple_consistency(
             remaining_deck_5.remove(card)
 
         result5: HandTestResult = hand_tester(remaining_deck_5, hand5.copy())
-        if result5.matches_without_gambling:
-            good_5 += 1
+
+        # Raw counts for pattern matches
+        matched_pattern_counts_5_nogamble[result5.matches_without_gambling] += 1
+        total_matches_5 = result5.matches_without_gambling + result5.rescued_with_gambling
+        matched_pattern_counts_5_withgamble[total_matches_5] += 1
+
+        if result5.matches_without_gambling > 0:
+            good_5 += result5.matches_without_gambling
             for c in hand5:
                 ideal_hand_counts[c] += 1
         else:
@@ -285,8 +303,7 @@ def simple_consistency(
             for c in set(deck) - set(hand5):
                 near_miss_counts[c] += 1
 
-        if result5.rescued_with_gambling:
-            rescued_5 += 1
+        rescued_5 += result5.rescued_with_gambling
         failed_gambles_5 += result5.gamble_failed
         unplayable_gambles_5 += result5.gamble_unplayable
         gamble_attempted_5 += result5.gamble_attempted
@@ -300,8 +317,13 @@ def simple_consistency(
             remaining_deck_for_6.remove(extra_card)
 
             result6: HandTestResult = hand_tester(remaining_deck_for_6, hand6)
-            if result6.matches_without_gambling:
-                good_6 += 1
+
+            matched_pattern_counts_6_nogamble[result6.matches_without_gambling] += 1
+            total_matches_6 = result6.matches_without_gambling + result6.rescued_with_gambling
+            matched_pattern_counts_6_withgamble[total_matches_6] += 1
+
+            if result6.matches_without_gambling > 0:
+                good_6 += result6.matches_without_gambling
                 for c in hand6:
                     ideal_hand_counts[c] += 1
             else:
@@ -310,8 +332,7 @@ def simple_consistency(
                 for c in set(deck) - set(hand6):
                     near_miss_counts[c] += 1
 
-            if result6.rescued_with_gambling:
-                rescued_6 += 1
+            rescued_6 += result6.rescued_with_gambling
             failed_gambles_6 += result6.gamble_failed
             unplayable_gambles_6 += result6.gamble_unplayable
             gamble_attempted_6 += result6.gamble_attempted
@@ -325,6 +346,7 @@ def simple_consistency(
         num_hands if deckcount >= 6 else 0.0
 
     return ConsistencyResult(
+        num_hands=num_hands,
         p5=p5,
         p6=p6,
         p5_with_gambling=p5_with_gambling,
@@ -344,4 +366,8 @@ def simple_consistency(
         near_miss_counts=near_miss_counts,
         blocking_card_counts=blocking_card_counts,
         ideal_hand_counts=ideal_hand_counts,
+        matched_pattern_counts_5=matched_pattern_counts_5_nogamble,
+        matched_pattern_counts_6=matched_pattern_counts_6_nogamble,
+        matched_pattern_counts_5_withgamble=matched_pattern_counts_5_withgamble,
+        matched_pattern_counts_6_withgamble=matched_pattern_counts_6_withgamble,
     )

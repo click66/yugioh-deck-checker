@@ -5,6 +5,8 @@ from collections import Counter as C
 
 @dataclass
 class ConsistencyResult:
+    num_hands: int
+
     # Success probabilities without gambling
     p5: float
     p6: float
@@ -12,6 +14,12 @@ class ConsistencyResult:
     # Success probabilities with gambling applied
     p5_with_gambling: float
     p6_with_gambling: float
+
+    # Map of counts (of matched patterns) to number of hands
+    matched_pattern_counts_5: dict[int, float]
+    matched_pattern_counts_6: dict[int, float]
+    matched_pattern_counts_5_withgamble: dict[int, float]
+    matched_pattern_counts_6_withgamble: dict[int, float]
 
     # Number of hands rescued by gambling
     rescued_5: int
@@ -44,8 +52,8 @@ class ConsistencyResult:
 
 @dataclass
 class HandTestResult:
-    matches_without_gambling: bool
-    matches_with_gambling: bool
+    matches_without_gambling: int
+    matches_with_gambling: int
 
     rescued_with_gambling: int = 0
 
