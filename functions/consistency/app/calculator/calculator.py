@@ -275,8 +275,8 @@ def simple_consistency(
     ideal_hand_counts: Counter[int] = Counter()
 
     # Track per-hand matched patterns (raw counts)
-    matched_pattern_counts_5_nogamble: Counter[int] = Counter()
-    matched_pattern_counts_6_nogamble: Counter[int] = Counter()
+    matched_pattern_counts_5: Counter[int] = Counter()
+    matched_pattern_counts_6: Counter[int] = Counter()
     matched_pattern_counts_5_withgamble: Counter[int] = Counter()
     matched_pattern_counts_6_withgamble: Counter[int] = Counter()
 
@@ -289,12 +289,12 @@ def simple_consistency(
         result5: HandTestResult = hand_tester(remaining_deck_5, hand5.copy())
 
         # Raw counts for pattern matches
-        matched_pattern_counts_5_nogamble[result5.matches_without_gambling] += 1
+        matched_pattern_counts_5[result5.matches_without_gambling] += 1
         total_matches_5 = result5.matches_without_gambling + result5.rescued_with_gambling
         matched_pattern_counts_5_withgamble[total_matches_5] += 1
 
         if result5.matches_without_gambling > 0:
-            good_5 += result5.matches_without_gambling
+            good_5 += 1
             for c in hand5:
                 ideal_hand_counts[c] += 1
         else:
@@ -318,12 +318,12 @@ def simple_consistency(
 
             result6: HandTestResult = hand_tester(remaining_deck_for_6, hand6)
 
-            matched_pattern_counts_6_nogamble[result6.matches_without_gambling] += 1
+            matched_pattern_counts_6[result6.matches_without_gambling] += 1
             total_matches_6 = result6.matches_without_gambling + result6.rescued_with_gambling
             matched_pattern_counts_6_withgamble[total_matches_6] += 1
 
             if result6.matches_without_gambling > 0:
-                good_6 += result6.matches_without_gambling
+                good_6 += 1
                 for c in hand6:
                     ideal_hand_counts[c] += 1
             else:
@@ -366,8 +366,8 @@ def simple_consistency(
         near_miss_counts=near_miss_counts,
         blocking_card_counts=blocking_card_counts,
         ideal_hand_counts=ideal_hand_counts,
-        matched_pattern_counts_5=matched_pattern_counts_5_nogamble,
-        matched_pattern_counts_6=matched_pattern_counts_6_nogamble,
+        matched_pattern_counts_5=matched_pattern_counts_5,
+        matched_pattern_counts_6=matched_pattern_counts_6,
         matched_pattern_counts_5_withgamble=matched_pattern_counts_5_withgamble,
         matched_pattern_counts_6_withgamble=matched_pattern_counts_6_withgamble,
     )

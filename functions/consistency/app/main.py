@@ -178,8 +178,8 @@ def event_handler(event):
             "near_miss_counts": serialize_counter(result_dict.get("near_miss_counts", Counter())),
             "blocking_card_counts": serialize_counter(result_dict.get("blocking_card_counts", Counter())),
             "ideal_hand_counts": serialize_counter(result_dict.get("ideal_hand_counts", Counter())),
-            "matched_pattern_counts_5": serialize_counter(result_dict.get("matched_pattern_counts_5_nogamble", Counter())),
-            "matched_pattern_counts_6": serialize_counter(result_dict.get("matched_pattern_counts_6_nogamble", Counter())),
+            "matched_pattern_counts_5": serialize_counter(result_dict.get("matched_pattern_counts_5", Counter())),
+            "matched_pattern_counts_6": serialize_counter(result_dict.get("matched_pattern_counts_6", Counter())),
             "matched_pattern_counts_5_withgamble": serialize_counter(result_dict.get("matched_pattern_counts_5_withgamble", Counter())),
             "matched_pattern_counts_6_withgamble": serialize_counter(result_dict.get("matched_pattern_counts_6_withgamble", Counter())),
         }
