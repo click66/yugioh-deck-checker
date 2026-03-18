@@ -800,14 +800,14 @@ export function Results({ job, cardDatabase }: ResultsProps) {
     const p6WithGambling = parseFloat(job.result.p6_with_gambling || '0')
 
     const matchedCounts5 = job.result.matched_pattern_counts_5 || {}
-    const multiMatch5Count = Object.values(matchedCounts5)
-        .filter((v) => Number(v) > 1)
-        .reduce((sum, val) => sum + Number(val), 0)
+    const multiMatch5Count = Object.entries(matchedCounts5)
+        .filter(([matches, _]) => Number(matches) > 1)
+        .reduce((sum, [, count]) => sum + Number(count), 0)
 
     const matchedCounts6 = job.result.matched_pattern_counts_6 || {}
-    const multiMatch6Count = Object.values(matchedCounts6)
-        .filter((v) => Number(v) > 1)
-        .reduce((sum, val) => sum + Number(val), 0)
+    const multiMatch6Count = Object.entries(matchedCounts6)
+        .filter(([matches, _]) => Number(matches) > 1)
+        .reduce((sum, [, count]) => sum + Number(count), 0)
 
     const rescued5 = parseInt(job.result.rescued_5 || '0', 10)
     const rescued6 = parseInt(job.result.rescued_6 || '0', 10)
@@ -897,7 +897,7 @@ export function Results({ job, cardDatabase }: ResultsProps) {
                         {(p5 * 100).toFixed(2)}%
                     </div>
                     <div className="text-gray-400 text-sm mt-2">
-                        Matched more than one ideal hand:{' '}
+                        Matched multiple hands:{' '}
                         {((multiMatch5Count / numHands) * 100).toFixed(2)}%
                     </div>
                     {usedGambling && (
@@ -912,7 +912,7 @@ export function Results({ job, cardDatabase }: ResultsProps) {
                         {(p6 * 100).toFixed(2)}%
                     </div>
                     <div className="text-gray-400 text-sm mt-2">
-                        Matched more than one ideal hand:{' '}
+                        Matched multiple hands:{' '}
                         {((multiMatch6Count / numHands) * 100).toFixed(2)}%
                     </div>
                     {usedGambling && (
