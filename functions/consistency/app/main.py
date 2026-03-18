@@ -157,6 +157,7 @@ def event_handler(event):
             return {str(k): v for k, v in counter.items()}
 
         combined_result = {
+            "num_hands": int(result_dict["num_hands"]),
             "used_gambling": f"{int(use_gambling)}",
             "p5": result_dict["p5"],
             "p6": result_dict["p6"],
