@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - feature/count-hands-that-matched-multiple-ideal_hands
 
 permissions:
   id-token: write
