@@ -76,8 +76,8 @@ def aggregate_batch_results(results: List[dict]) -> dict:
     int_keys = [
         "rescued_5", "rescued_6",
         "gamble_attempted_5", "gamble_attempted_6",
-        "failed_gambles_5", "failed_gambles_6",
-        "unplayable_gambles_5", "unplayable_gambles_6",
+        "gamble_failed_5", "gamble_failed_6",
+        "gamble_unplayable_5", "gamble_unplayable_6",
     ]
     summed_ints = {k: sum(r.get(k, 0) for r in results) for k in int_keys}
 
