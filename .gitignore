@@ -2,5 +2,5 @@
 .ipynb_checkpoints
 .serverless
 .vite
+.DS_Store
 **/__pycache__/
-
