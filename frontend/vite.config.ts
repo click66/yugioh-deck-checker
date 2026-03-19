@@ -7,6 +7,7 @@ export default defineConfig({
     server: {
         proxy: {
             '/consistency': 'http://api:8000',
+            '/v2/consistency': 'http://api:8000',
         },
     },
 })

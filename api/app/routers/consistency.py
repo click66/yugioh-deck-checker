@@ -43,6 +43,12 @@ async def create_job(
     runner=Depends(get_job_runner("consistency")),
     registry=Depends(get_job_registry),
 ):
+    if payload.num_hands > 1_000_000:
+        raise HTTPException(
+            status_code=400,
+            detail="Requested test hands exceeds maximum permitted",
+        )
+
     if len(payload.names) != len(payload.ratios):
         raise HTTPException(
             status_code=400,

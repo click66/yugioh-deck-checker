@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
 
 from app.dependencies.jobs.sqs import SQSJobRunner
-from app.routers import consistency
+from app.routers import consistency, consistency_v2
 from app.settings import get_settings
 
 
@@ -59,5 +59,6 @@ app.add_middleware(
 )
 
 app.include_router(consistency.router)
+app.include_router(consistency_v2.router)
 
 handler = Mangum(app)

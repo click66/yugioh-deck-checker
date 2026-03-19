@@ -85,13 +85,13 @@ export function createJob(payload: {
     use_gambling: boolean
 }): Promise<ConsistencyJobResponse> {
     return api
-        .post('/consistency/jobs/create', payload)
+        .post('/v2/consistency/jobs/create', payload)
         .then((res) => ConsistencyJobSchema.parse(res.data))
 }
 
 export function getJob(jobId: string): Promise<ConsistencyJobResponse | null> {
     return api
-        .get(`/consistency/jobs/${jobId}`)
+        .get(`/v2/consistency/jobs/${jobId}`)
         .then((res) => ConsistencyJobSchema.parse(res.data))
         .catch((err) => {
             if (err.response?.status === 404) {

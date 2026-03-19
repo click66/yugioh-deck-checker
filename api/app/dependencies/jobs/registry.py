@@ -81,7 +81,7 @@ class DynamoJobRegistry:
 
         return batch.batch_id
 
-    async def get_batch_jobs(self, batch_id: str) -> BatchJob:
+    async def get_batch_job(self, batch_id: str) -> BatchJob:
         resp = await self._client.query(
             TableName=self._table_name,
             IndexName=BATCH_INDEX,

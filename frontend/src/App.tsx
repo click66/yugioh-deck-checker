@@ -211,7 +211,7 @@ export default function App() {
             ideal_hands: hands.map((hand) =>
                 hand.map((c) => (typeof c.id === 'number' ? `${c.id}` : c.id)),
             ),
-            num_hands: hands.length,
+            num_hands: 1_000_000,
             use_gambling: useGambling,
         }
 

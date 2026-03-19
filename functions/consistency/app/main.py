@@ -6,7 +6,6 @@ from typing import Counter
 import boto3
 import json
 import logging
-import sys
 
 from app.calculator.calculator import (
     hand_is_wild,
@@ -69,12 +68,12 @@ def run_calculation(
     ideal_hands,
     card_database,
     use_gambling,
+    num_hands: int,
 ):
     start_time = time.time()
 
     card_attribute_index = build_card_attribute_index(card_database)
     compiled_hands = compile_patterns(ideal_hands)
-    num_hands = 1_000_000
 
     def hand_tester(remaining_deck, hand):
         def hand_checker(hand, compiled=compiled_hands):
@@ -116,6 +115,7 @@ def event_handler(event):
     ratios = event["ratios"]
     ideal_hands = event["ideal_hands"]
     use_gambling = event.get("use_gambling", False)
+    num_hands = event.get("num_hands")
 
     logger.info(f"Job {job_id} started. use_gambling={use_gambling}")
     logger.info("Reading card database...")
@@ -135,6 +135,7 @@ def event_handler(event):
             ideal_hands=ideal_hands,
             card_database=card_database,
             use_gambling=use_gambling,
+            num_hands=num_hands,
         )
         status = "completed"
     except Exception as e:
