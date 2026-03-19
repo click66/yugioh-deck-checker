@@ -5,10 +5,11 @@ from botocore.config import Config
 from boto3.dynamodb.types import TypeDeserializer
 from fastapi import Request
 
-from app.dependencies.jobs.job import Job
+from app.dependencies.jobs.job import BatchJob, Job
 from app.settings import get_settings
 
 TABLE_NAME = "jobs"
+BATCH_INDEX = "batch_id-index"
 
 deserializer = TypeDeserializer()
 
@@ -53,6 +54,64 @@ class DynamoJobRegistry:
                 "status": {"S": "pending"},
                 "created_at": {"N": str(now)},
             }
+        )
+
+    async def create_batch(
+        self,
+        batch: BatchJob,
+        ttl_seconds: int = 600,
+    ) -> str:
+        """Create all jobs in a supplied batch"""
+        now = int(time.time())
+
+        for job in batch.jobs:
+            item = {
+                "job_id": {"S": job.job_id},
+                "payload": {"S": str(job.payload)},
+                "ttl": {"N": str(now + ttl_seconds)},
+                "status": {"S": job.status},
+                "created_at": {"N": str(int(job.created_at.timestamp()))},
+                "batch_id": {"S": batch.batch_id},
+            }
+
+            await self._client.put_item(
+                TableName=self._table_name,
+                Item=item,
+            )
+
+        return batch.batch_id
+
+    async def get_batch_jobs(self, batch_id: str) -> BatchJob:
+        resp = await self._client.query(
+            TableName=self._table_name,
+            IndexName=BATCH_INDEX,
+            KeyConditionExpression="batch_id = :b",
+            ExpressionAttributeValues={
+                ":b": {"S": batch_id},
+            },
+        )
+
+        items = resp.get("Items", [])
+
+        jobs: list[Job] = []
+
+        for item in items:
+            d = {k: deserializer.deserialize(v) for k, v in item.items()}
+
+            jobs.append(
+                Job(
+                    job_id=d.get("job_id"),
+                    payload=d.get("payload", {}),
+                    status=d.get("status", "pending"),
+                    created_at=d.get("created_at"),
+                    completed_at=d.get("completed_at"),
+                    result=d.get("result"),
+                )
+            )
+
+        return BatchJob(
+            batch_id=batch_id,
+            jobs=jobs,
         )
 
 

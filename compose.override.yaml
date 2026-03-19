@@ -31,9 +31,12 @@ services:
       - "8080:8080"
     environment:
       - AWS_DEFAULT_REGION=eu-west-2
+      - DEFAULT_ACCOUNT_ID=000000000000
       - SERVICES=dynamodb,iam,lambda,sqs
       - DEBUG=1
       - DATA_DIR=/tmp/localstack/data
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
     volumes:
       - ./localstack:/localstack
       - ./init-localstack.sh:/etc/localstack/init/ready.d/init-aws.sh
