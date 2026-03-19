@@ -97,6 +97,7 @@ def aggregate_batch_results(results: List[dict]) -> dict:
 
     return {
         "num_hands": total_hands,
+        "used_gambling": results[0].get("used_gambling", False),
         "p5": p5,
         "p6": p6,
         "p5_with_gambling": p5_with_gambling,
