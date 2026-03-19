@@ -1,3 +1,5 @@
+from typing import List
+from collections import Counter
 from fastapi import APIRouter, Depends, HTTPException
 from typing import List, Optional
 
@@ -35,6 +37,77 @@ class ConsistencyJobResponse(BaseModel):
     status: str
     result: Optional[dict] = None
     error: Optional[ConsistencyJobError] = None
+
+
+def aggregate_batch_results(results: List[dict]) -> dict:
+    if not results:
+        return {}
+
+    total_hands = sum(r.get("num_hands", 0) for r in results)
+    if total_hands == 0:
+        total_hands = 1  # avoid division by zero
+
+    # Weighted averages for probabilities
+    def weighted_avg(key: str):
+        return sum(r.get(key, 0) * r.get("num_hands", 0) for r in results) / total_hands
+
+    p5 = weighted_avg("p5")
+    p6 = weighted_avg("p6")
+    p5_with_gambling = weighted_avg("p5_with_gambling")
+    p6_with_gambling = weighted_avg("p6_with_gambling")
+
+    # Sum dictionaries
+    def sum_dicts(keys: List[str]):
+        agg = {}
+        for key in keys:
+            for r in results:
+                for k, v in r.get(key, {}).items():
+                    agg[k] = agg.get(k, 0) + v
+        return agg
+
+    matched_pattern_counts_5 = sum_dicts(["matched_pattern_counts_5"])
+    matched_pattern_counts_6 = sum_dicts(["matched_pattern_counts_6"])
+    matched_pattern_counts_5_withgamble = sum_dicts(
+        ["matched_pattern_counts_5_withgamble"])
+    matched_pattern_counts_6_withgamble = sum_dicts(
+        ["matched_pattern_counts_6_withgamble"])
+
+    # Sum scalar integers
+    int_keys = [
+        "rescued_5", "rescued_6",
+        "gamble_attempted_5", "gamble_attempted_6",
+        "failed_gambles_5", "failed_gambles_6",
+        "unplayable_gambles_5", "unplayable_gambles_6",
+    ]
+    summed_ints = {k: sum(r.get(k, 0) for r in results) for k in int_keys}
+
+    # Sum Counter-like dicts
+    counter_keys = [
+        "useful_gambles_5", "useful_gambles_6",
+        "gamble_seen_5", "gamble_seen_6",
+        "near_miss_counts", "blocking_card_counts",
+        "ideal_hand_counts",
+    ]
+    summed_counters = {}
+    for key in counter_keys:
+        agg = Counter()
+        for r in results:
+            agg.update(r.get(key, {}))
+        summed_counters[key] = dict(agg)
+
+    return {
+        "num_hands": total_hands,
+        "p5": p5,
+        "p6": p6,
+        "p5_with_gambling": p5_with_gambling,
+        "p6_with_gambling": p6_with_gambling,
+        "matched_pattern_counts_5": matched_pattern_counts_5,
+        "matched_pattern_counts_6": matched_pattern_counts_6,
+        "matched_pattern_counts_5_withgamble": matched_pattern_counts_5_withgamble,
+        "matched_pattern_counts_6_withgamble": matched_pattern_counts_6_withgamble,
+        **summed_ints,
+        **summed_counters,
+    }
 
 
 @router.post("/jobs/create", response_model=ConsistencyJobResponse)
@@ -114,11 +187,7 @@ async def get_batch_job_status(
     # Aggregate results if all complete
     aggregated_result = None
     if status == "completed":
-        aggregated_result = {}
-        for job in batch.jobs:
-            if job.result:
-                for k, v in job.result.items():
-                    aggregated_result[k] = aggregated_result.get(k, 0) + v
+        aggregated_result = aggregate_batch_results([job.result for job in batch.jobs if job.result])
 
     return ConsistencyJobResponse(
         job_id=batch.batch_id,
