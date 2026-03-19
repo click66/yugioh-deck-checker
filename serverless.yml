@@ -46,6 +46,7 @@ provider:
           Resource: "arn:aws:lambda:${self:provider.region}:${aws:accountId}:function:yugioh-deck-checker-*"
         - Effect: Allow
           Action:
+            - sqs:GetQueueUrl
             - sqs:SendMessage
           Resource:
             - !GetAtt JobQueue.Arn
