@@ -353,11 +353,13 @@ function Panel({ title, expanded, toggle, children, expandable = true }: any) {
         </div>
     )
 }
-
 function Step1({ expanded, toggle, deckProps }: any) {
     const { cards: cardDatabase } = useCardDatabase()
     const { deck, setDeck, deckSize, setDeckSize, parseDeck, clearDeck } =
         deckProps
+
+    const [showPasteModal, setShowPasteModal] = useState(false)
+    const [pastedYdk, setPastedYdk] = useState('')
 
     const updateRow = (
         index: number,
@@ -365,14 +367,12 @@ function Step1({ expanded, toggle, deckProps }: any) {
         value: string,
     ) => {
         const updated = [...deck]
-
-        if (field === 'count') {
+        if (field === 'count')
             updated[index].count = value === '' ? '' : Number(value)
-        } else {
+        else {
             updated[index].input = value
             updated[index].card = null
         }
-
         setDeck(updated)
     }
 
@@ -395,32 +395,27 @@ function Step1({ expanded, toggle, deckProps }: any) {
 
     function importYdkFile(file: File) {
         const reader = new FileReader()
-
         reader.onload = () => {
-            if (!reader.result) {
-                return
-            }
-
-            const countMap = parseYdk(reader.result as string)
-
-            const importedDeck: DeckLine[] = Array.from(countMap.entries())
-                .map(([id, count]) => {
-                    const card = cardDatabase.find((c) => c.id === id)
-
-                    if (!card) return undefined
-
-                    return {
-                        card,
-                        input: card.name,
-                        count: count as number | '',
-                    }
-                })
-                .filter((c) => c !== undefined)
-
-            setDeck(importedDeck)
+            if (!reader.result) return
+            parseYdkContent(reader.result as string)
         }
-
         reader.readAsText(file)
+    }
+
+    function parseYdkContent(ydkString: string) {
+        const countMap = parseYdk(ydkString)
+
+        const importedDeck: DeckLine[] = Array.from(countMap.entries())
+            .map(([id, count]) => {
+                const card = cardDatabase.find((c) => c.id === id)
+                if (!card) return undefined
+                return { card, input: card.name, count: count as number | '' }
+            })
+            .filter((c) => c !== undefined)
+
+        setDeck(importedDeck)
+        setShowPasteModal(false)
+        setPastedYdk('')
     }
 
     return (
@@ -457,39 +452,89 @@ function Step1({ expanded, toggle, deckProps }: any) {
                     />
                 ))}
 
-                <div className="flex gap-3 pt-3 items-center">
-                    <button
-                        onClick={addRow}
-                        className="px-4 py-2 bg-gray-200 rounded"
-                    >
-                        Add Card
-                    </button>
-                    <button
-                        onClick={parseDeck}
-                        className="px-5 py-2 bg-blue-500 text-white rounded"
-                    >
-                        Next
-                    </button>
-                    <button
-                        onClick={clearDeck}
-                        className="px-4 py-2 bg-red-500 text-white rounded"
-                    >
-                        Clear Deck
-                    </button>
-                    <label className="px-4 py-2 bg-green-500 text-white rounded cursor-pointer hover:bg-green-600">
-                        Import YDK
-                        <input
-                            type="file"
-                            accept=".ydk,text/plain"
-                            onChange={(e) =>
-                                e.target.files?.[0] &&
-                                importYdkFile(e.target.files[0])
-                            }
-                            className="hidden"
-                        />
-                    </label>
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 pt-3">
+                    <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                        <button
+                            onClick={addRow}
+                            className="w-full sm:w-auto px-4 py-2 bg-gray-200 rounded"
+                        >
+                            Add Card
+                        </button>
+                        <button
+                            onClick={clearDeck}
+                            className="w-full sm:w-auto px-4 py-2 bg-red-500 text-white rounded"
+                        >
+                            Clear Deck
+                        </button>
+
+                        <div className="flex flex-row gap-3 w-full sm:w-auto">
+                            <label className="w-1/2 sm:w-auto px-4 py-2 bg-green-500 text-white rounded cursor-pointer hover:bg-green-600 text-center">
+                                Import YDK
+                                <input
+                                    type="file"
+                                    accept=".ydk,text/plain"
+                                    onChange={(e) =>
+                                        e.target.files?.[0] &&
+                                        importYdkFile(e.target.files[0])
+                                    }
+                                    className="hidden"
+                                />
+                            </label>
+                            <button
+                                className="w-1/2 sm:w-auto px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600"
+                                onClick={() => setShowPasteModal(true)}
+                            >
+                                Copy/Paste YDK
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="order-2 sm:order-2 sm:ml-auto w-full sm:w-auto">
+                        <button
+                            onClick={parseDeck}
+                            className="px-5 py-2 bg-blue-500 text-white rounded w-full sm:w-auto"
+                        >
+                            Next
+                        </button>
+                    </div>
                 </div>
             </div>
+
+            {showPasteModal && (
+                <div
+                    className="fixed inset-0 bg-black/30 flex items-center justify-center p-4 z-50"
+                    onClick={() => setShowPasteModal(false)}
+                >
+                    <div
+                        className="bg-white rounded-xl shadow-lg p-6 w-full max-w-xl flex flex-col gap-4 max-h-[80vh] overflow-y-auto"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <h3 className="text-lg font-semibold mb-2 text-center">
+                            Paste YDK Contents
+                        </h3>
+                        <textarea
+                            value={pastedYdk}
+                            onChange={(e) => setPastedYdk(e.target.value)}
+                            className="w-full h-64 border border-gray-300 rounded p-2 text-sm"
+                        />
+                        <div className="flex justify-end gap-3 mt-2">
+                            <button
+                                onClick={() => setShowPasteModal(false)}
+                                className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => parseYdkContent(pastedYdk)}
+                                disabled={!pastedYdk.trim()}
+                                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
+                            >
+                                Import
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </Panel>
     )
 }
@@ -520,7 +565,7 @@ function Step2({ expanded, toggle, handProps, setExpandedSteps }: any) {
 
     const goNext = () => {
         toggle()
-        setExpandedSteps((prev: any) => ({ ...prev, 3: true })) // open step 3
+        setExpandedSteps((prev: any) => ({ ...prev, 3: true }))
     }
 
     return (
@@ -570,17 +615,18 @@ function Step2({ expanded, toggle, handProps, setExpandedSteps }: any) {
                 ))}
             </div>
 
-            <div className="flex gap-3 pt-3 items-center">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 pt-3 w-full">
                 <button
                     onClick={() => setShowHandModal(true)}
-                    className="px-4 py-2 bg-green-500 text-white rounded"
+                    className="w-full sm:w-auto px-4 py-2 bg-green-500 text-white rounded"
                 >
                     Add Ideal Hand
                 </button>
+
                 <button
                     onClick={goNext}
                     disabled={hands.length === 0}
-                    className="px-5 py-2 bg-blue-500 text-white rounded disabled:opacity-50"
+                    className="w-full sm:w-auto px-5 py-2 bg-blue-500 text-white rounded disabled:opacity-50"
                 >
                     Next
                 </button>
