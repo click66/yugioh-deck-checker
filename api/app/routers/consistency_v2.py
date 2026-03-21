@@ -185,13 +185,32 @@ async def get_batch_job_status(
     else:
         status = "unknown"
 
-    # Aggregate results if all complete
     aggregated_result = None
+    error = None
+
+    if status == "failed":
+        failed_job = next(
+            (job for job in batch.jobs if job.status == "failed"), None)
+
+        if failed_job and getattr(failed_job, "error", None):
+            error = ConsistencyJobError(
+                code="BATCH_JOB_FAILED",
+                detail=failed_job.error,
+            )
+        else:
+            error = ConsistencyJobError(
+                code="BATCH_JOB_FAILED",
+                detail="Job failed",
+            )
+
     if status == "completed":
-        aggregated_result = aggregate_batch_results([job.result for job in batch.jobs if job.result])
+        aggregated_result = aggregate_batch_results(
+            [job.result for job in batch.jobs if job.result]
+        )
 
     return ConsistencyJobResponse(
         job_id=batch.batch_id,
         status=status,
         result=aggregated_result,
+        error=error,
     )
