@@ -254,7 +254,6 @@ export default function App() {
         cancelAnalysis,
         deck,
         deckSize,
-        setDeckSize,
     }
 
     return (
@@ -353,6 +352,7 @@ function Panel({ title, expanded, toggle, children, expandable = true }: any) {
         </div>
     )
 }
+
 function Step1({ expanded, toggle, deckProps }: any) {
     const { cards: cardDatabase } = useCardDatabase()
     const { deck, setDeck, deckSize, setDeckSize, parseDeck, clearDeck } =
@@ -428,7 +428,7 @@ function Step1({ expanded, toggle, deckProps }: any) {
                 <label className="text-sm text-gray-600">Deck size</label>
                 <input
                     type="number"
-                    value={deckSize}
+                    value={deckSize.toString()}
                     onChange={(e) => setDeckSize(Number(e.target.value))}
                     className="ml-3 w-24 border border-gray-200 rounded px-2 py-1"
                 />
@@ -764,17 +764,12 @@ function Step3({ expanded, toggle, analysisProps, children }: any) {
         cancelAnalysis,
         deck,
         deckSize,
-        setDeckSize,
     } = analysisProps
 
     const totalRatios = deck.reduce(
         (sum: number, d: any) => sum + (Number(d.count) || 0),
         0,
     )
-
-    if (totalRatios > deckSize) {
-        setDeckSize(totalRatios)
-    }
 
     const isDeckValid = totalRatios <= deckSize
     const canRunAnalysis = hands.length > 0 && isDeckValid
