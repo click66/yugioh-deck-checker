@@ -254,6 +254,7 @@ export default function App() {
         cancelAnalysis,
         deck,
         deckSize,
+        setDeckSize,
     }
 
     return (
@@ -717,17 +718,22 @@ function Step3({ expanded, toggle, analysisProps, children }: any) {
         cancelAnalysis,
         deck,
         deckSize,
+        setDeckSize,
     } = analysisProps
-
-    const { cards: cardDatabase } = useCardDatabase()
 
     const totalRatios = deck.reduce(
         (sum: number, d: any) => sum + (Number(d.count) || 0),
         0,
     )
 
+    if (totalRatios > deckSize) {
+        setDeckSize(totalRatios)
+    }
+
     const isDeckValid = totalRatios <= deckSize
     const canRunAnalysis = hands.length > 0 && isDeckValid
+
+    const { cards: cardDatabase } = useCardDatabase()
 
     return (
         <Panel
