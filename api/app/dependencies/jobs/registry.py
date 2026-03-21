@@ -40,6 +40,7 @@ class DynamoJobRegistry:
             created_at=deserialized.get("created_at"),
             completed_at=deserialized.get("completed_at"),
             result=deserialized.get("result", None),
+            error=deserialized.get("error"),
         )
 
     async def create_job(self, job: Job, ttl_seconds: int = 600):
@@ -106,6 +107,7 @@ class DynamoJobRegistry:
                     created_at=d.get("created_at"),
                     completed_at=d.get("completed_at"),
                     result=d.get("result"),
+                    error=d.get("error"),
                 )
             )
 
