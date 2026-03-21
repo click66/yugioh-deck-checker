@@ -192,10 +192,16 @@ async def get_batch_job_status(
         failed_job = next(
             (job for job in batch.jobs if job.status == "failed"), None)
 
-        if failed_job and getattr(failed_job, "error", None):
+        raw_error = getattr(failed_job, "error", None) if failed_job else None
+
+        if isinstance(raw_error, dict):
+            raw_error = raw_error.get("S") or raw_error.get(
+                "error") or str(raw_error)
+
+        if raw_error:
             error = ConsistencyJobError(
                 code="BATCH_JOB_FAILED",
-                detail=failed_job.error,
+                detail=raw_error,
             )
         else:
             error = ConsistencyJobError(
