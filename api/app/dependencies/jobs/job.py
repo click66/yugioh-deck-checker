@@ -12,7 +12,7 @@ class Job:
     created_at: datetime = field(default_factory=datetime.utcnow)
     completed_at: datetime | None = None
     result: Dict[str, Any] | None = None
-
+    error: str | None = None
 
 @dataclass
 class BatchJob:
