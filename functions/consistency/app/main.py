@@ -127,6 +127,8 @@ def event_handler(event):
         logger.error(f"Failed to load card database from S3: {e}")
         card_database = {}
 
+    error_message = None  # <-- add this
+
     try:
         result = run_calculation(
             deckcount=deckcount,
@@ -142,6 +144,7 @@ def event_handler(event):
         logger.error(f"Job {job_id} failed: {e}")
         result = None
         status = "failed"
+        error_message = str(e)  # <-- capture error
 
     logger.info("Writing result...")
     dynamodb = _get_dynamodb_client()
@@ -149,6 +152,11 @@ def event_handler(event):
     expression_attr_names = {"#s": "status"}
     expression_attr_values = {":status": {"S": status}}
     update_expression = "SET #s = :status"
+
+    if error_message is not None:
+        update_expression += ", #e = :error"
+        expression_attr_names["#e"] = "error"
+        expression_attr_values[":error"] = {"S": error_message}
 
     if result is not None:
         result_dict = {k: getattr(result, k)

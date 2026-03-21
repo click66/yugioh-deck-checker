@@ -252,6 +252,8 @@ export default function App() {
         useGambling,
         setUseGambling,
         cancelAnalysis,
+        deck,
+        deckSize,
     }
 
     return (
@@ -713,9 +715,19 @@ function Step3({ expanded, toggle, analysisProps, children }: any) {
         useGambling,
         setUseGambling,
         cancelAnalysis,
+        deck,
+        deckSize,
     } = analysisProps
 
     const { cards: cardDatabase } = useCardDatabase()
+
+    const totalRatios = deck.reduce(
+        (sum: number, d: any) => sum + (Number(d.count) || 0),
+        0,
+    )
+
+    const isDeckValid = totalRatios <= deckSize
+    const canRunAnalysis = hands.length > 0 && isDeckValid
 
     return (
         <Panel
@@ -745,8 +757,8 @@ function Step3({ expanded, toggle, analysisProps, children }: any) {
 
                         <button
                             onClick={runAnalysis}
-                            disabled={hands.length === 0}
-                            className="px-5 py-2 bg-purple-500 text-white rounded hover:bg-purple-600"
+                            disabled={!canRunAnalysis}
+                            className="px-5 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 disabled:opacity-50"
                         >
                             Run Analysis
                         </button>
@@ -762,6 +774,13 @@ function Step3({ expanded, toggle, analysisProps, children }: any) {
                     </button>
                 )}
             </div>
+
+            {!isDeckValid && (
+                <div className="mb-4 p-3 border border-red-300 bg-red-50 text-red-700 rounded">
+                    Total card counts exceed deck size ({totalRatios} /{' '}
+                    {deckSize})
+                </div>
+            )}
 
             {children}
 
@@ -779,10 +798,12 @@ function Step3({ expanded, toggle, analysisProps, children }: any) {
                     </div>
                 </div>
             )}
+
             {job?.result && <Results job={job} cardDatabase={cardDatabase} />}
         </Panel>
     )
 }
+
 interface ResultsProps {
     job: ConsistencyJobResponse
     cardDatabase: Card[]
