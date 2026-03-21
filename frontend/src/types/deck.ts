@@ -10,3 +10,5 @@ export type DeckLine = {
     input: string
     count: number | ''
 }
+
+export type HandItem = Card | Wildcard
