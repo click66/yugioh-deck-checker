@@ -6,6 +6,7 @@ from typing import List, Optional
 from app.dependencies.jobs.runners import get_job_runner
 from app.dependencies.jobs.registry import get_job_registry
 from app.dependencies.jobs.job import BatchJob, Job
+from app.logger import logger
 from app.schemas import BaseModel
 
 """
@@ -173,6 +174,9 @@ async def get_batch_job_status(
 
     if not batch.jobs:
         raise HTTPException(status_code=404, detail="Batch not found")
+
+    for job in batch.jobs:
+        logger.info(f"Read job result rows {job.job_id} contents: {job.__dict__}")
 
     # Determine batch status
     statuses = {job.status for job in batch.jobs}
